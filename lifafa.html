@@ -1,1 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lifafa</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0d0d1a;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .user-card {
+            background: #1a1a2e;
+            border-radius: 16px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 20px;
+        }
+        .user-info { display: flex; align-items: center; gap: 12px; }
+        .user-avatar-placeholder {
+            width: 52px; height: 52px; border-radius: 50%;
+            background: linear-gradient(135deg, #6c63ff, #a78bfa);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; font-weight: 700; color: #fff; flex-shrink: 0;
+        }
+        .user-avatar { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; }
+        .user-name { font-size: 16px; font-weight: 700; }
+        .user-id { font-size: 13px; color: #888; margin-top: 2px; }
+        .status-badge {
+            background: #2a2a4a; color: #a78bfa;
+            font-size: 11px; font-weight: 700;
+            padding: 6px 14px; border-radius: 20px;
+            letter-spacing: 1px; white-space: nowrap;
+        }
+        .status-badge.success { background: rgba(0,200,100,0.15); color: #00c864; }
+        .status-badge.failed { background: rgba(255,50,50,0.15); color: #ff4444; }
+        .main-card {
+            background: #1a1a2e; border-radius: 24px;
+            padding: 30px 25px; width: 100%; max-width: 400px; text-align: center;
+        }
+        .gift-icon {
+            width: 80px; height: 80px;
+            background: linear-gradient(135deg, #6c63ff, #a78bfa);
+            border-radius: 22px;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 20px; font-size: 38px;
+        }
+        h1 { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+        .subtitle { font-size: 13px; color: #888; margin-bottom: 25px; line-height: 1.6; }
 
+        /* Steps */
+        .steps { text-align: left; margin-bottom: 20px; }
+        .step { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+        .step-icon {
+            width: 30px; height: 30px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; font-weight: 700; flex-shrink: 0;
+            background: #2a2a4a; color: #888;
+        }
+        .step-icon.done { background: #00c864; color: #fff; }
+        .step-icon.loading { background: #6c63ff; color: #fff; }
+        .step-icon.error { background: #ff4444; color: #fff; }
+        .step-text { font-size: 14px; color: #666; }
+        .step-text.active { color: #fff; }
+
+        /* Channels */
+        .channels-list { margin-bottom: 20px; }
+        .channel-item {
+            background: #0f0f1a; border-radius: 12px;
+            padding: 14px 16px; margin-bottom: 10px;
+            display: flex; align-items: center;
+            justify-content: space-between;
+        }
+        .channel-name { font-size: 14px; font-weight: 600; }
+        .channel-btn {
+            padding: 8px 16px; border: none; border-radius: 8px;
+            font-size: 13px; font-weight: 700; cursor: pointer;
+            background: linear-gradient(135deg, #6c63ff, #a78bfa);
+            color: #fff; text-decoration: none;
+        }
+        .channel-btn.joined {
+            background: rgba(0,200,100,0.15);
+            color: #00c864; cursor: default;
+        }
+
+        /* Reward box */
+        .reward-box {
+            background: linear-gradient(135deg, rgba(108,99,255,0.2), rgba(167,139,250,0.2));
+            border: 1px solid rgba(108,99,255,0.4);
+            border-radius: 16px; padding: 20px; margin-bottom: 20px;
+            display: none;
+        }
+        .reward-title { font-size: 13px; color: #a78bfa; margin-bottom: 8px; }
+        .reward-value {
+            font-size: 18px; font-weight: 800;
+            background: linear-gradient(135deg, #6c63ff, #a78bfa);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            word-break: break-all;
+        }
+        .copy-btn {
+            margin-top: 12px; padding: 10px 20px; border: none;
+            border-radius: 10px; font-size: 13px; font-weight: 700;
+            cursor: pointer; background: #6c63ff; color: #fff;
+        }
+
+        /* Progress */
+        .progress-bar {
+            height: 4px; background: #2a2a4a;
+            border-radius: 10px; overflow: hidden; margin-bottom: 20px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6c63ff, #a78bfa);
+            width: 0%; transition: width 0.5s ease;
+        }
+
+        .btn {
+            width: 100%; padding: 15px; border: none;
+            border-radius: 12px; font-size: 15px; font-weight: 700;
+            cursor: pointer;
+            background: linear-gradient(135deg, #6c63ff, #a78bfa);
+            color: #fff; transition: opacity 0.2s;
+        }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn:active { opacity: 0.8; }
+
+        .powered { margin-top: 16px; font-size: 12px; color: #555; }
+        .powered span { color: #6c63ff; font-weight: 700; }
+
+        .loader {
+            display: inline-block; width: 14px; height: 14px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff; border-radius: 50%;
+            animation: spin 0.8s linear infinite; vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Admin Panel */
+        .admin-panel { display: none; }
+        .admin-card {
+            background: #1a1a2e; border-radius: 16px;
+            padding: 20px; width: 100%; max-width: 400px;
+            margin-bottom: 15px;
+        }
+        .admin-title { font-size: 16px; font-weight: 700; margin-bottom: 15px; color: #a78bfa; }
+        .input-group { margin-bottom: 12px; }
+        .input-label { font-size: 12px; color: #888; margin-bottom: 5px; display: block; }
+        .input-field {
+            width: 100%; padding: 12px; border-radius: 10px;
+            background: #0f0f1a; border: 1px solid #2a2a4a;
+            color: #fff; font-size: 14px; outline: none;
+        }
+        .input-field:focus { border-color: #6c63ff; }
+        select.input-field { cursor: pointer; }
+        .save-btn {
+            width: 100%; padding: 12px; border: none;
+            border-radius: 10px; font-size: 14px; font-weight: 700;
+            cursor: pointer; background: #6c63ff; color: #fff; margin-top: 5px;
+        }
+        .channel-add-row {
+            display: flex; gap: 8px; margin-bottom: 8px;
+        }
+        .channel-add-row .input-field { flex: 1; }
+        .remove-btn {
+            padding: 8px 12px; border: none; border-radius: 8px;
+            background: rgba(255,50,50,0.2); color: #ff4444;
+            cursor: pointer; font-size: 16px;
+        }
+        .add-ch-btn {
+            width: 100%; padding: 10px; border: none; border-radius: 8px;
+            background: rgba(108,99,255,0.2); color: #a78bfa;
+            cursor: pointer; font-size: 14px; font-weight: 600; margin-top: 5px;
+        }
+        .success-msg { color: #00c864; font-size: 13px; margin-top: 8px; display: none; }
+    </style>
+</head>
+<body>
+
+<div id="userCardEl" class="user-card">
+    <div class="user-info">
+        <div class="user-avatar-placeholder" id="avatarEl">?</div>
+        <div>
+            <div class="user-name" id="userName">Loading...</div>
+            <div class="user-id" id="userId">ID: ...</div>
+        </div>
+    </div>
+    <div class="status-badge" id="statusBadge">LOADING</div>
+</div>
+
+<!-- User Flow -->
+<div class="main-card" id="mainCard">
+    <div class="gift-icon">🎁</div>
+    <h1 id="mainTitle">Lifafa</h1>
+    <p class="subtitle" id="mainSubtitle">Verify karo aur reward lo!</p>
+
+    <div class="steps" id="stepsEl">
+        <div class="step">
+            <div class="step-icon" id="s1">1</div>
+            <div class="step-text" id="t1">Device verify ho rahi hai...</div>
+        </div>
+        <div class="step">
+            <div class="step-icon" id="s2">2</div>
+            <div class="step-text" id="t2">Channels join karo</div>
+        </div>
+        <div class="step">
+            <div class="step-icon" id="s3">3</div>
+            <div class="step-text" id="t3">Reward claim karo</div>
+        </div>
+    </div>
+
+    <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+    </div>
+
+    <div class="channels-list" id="channelsList" style="display:none;"></div>
+
+    <div class="reward-box" id="rewardBox">
+        <div class="reward-title" id="rewardTitle">🎁 Your Reward</div>
+        <div class="reward-value" id="rewardValue">-</div>
+        <button class="copy-btn" id="copyBtn" onclick="copyReward()">📋 Copy</button>
+    </div>
+
+    <button class="btn" id="actionBtn" disabled>
+        <span class="loader"></span> Loading...
+    </button>
+
+    <div class="powered">Powered by <span>UNIO WALLET</span> ✅</div>
+</div>
+
+<!-- Admin Panel -->
+<div class="admin-panel" id="adminPanel">
+    <div class="admin-card">
+        <div class="admin-title">⚙️ Admin Panel — Lifafa Config</div>
+
+        <!-- Channels -->
+        <div class="input-group">
+            <label class="input-label">📢 Channels (name|link format)</label>
+            <div id="channelInputs">
+                <div class="channel-add-row">
+                    <input class="input-field" placeholder="Channel Name" id="chName0">
+                    <input class="input-field" placeholder="https://t.me/..." id="chLink0">
+                    <button class="remove-btn" onclick="removeCh(0)">✕</button>
+                </div>
+            </div>
+            <button class="add-ch-btn" onclick="addChannel()">+ Add Channel</button>
+        </div>
+
+        <!-- Reward Type -->
+        <div class="input-group">
+            <label class="input-label">🎁 Reward Type</label>
+            <select class="input-field" id="rewardType">
+                <option value="code">Gift Code</option>
+                <option value="link">Link</option>
+                <option value="text">Custom Text</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label class="input-label">🏷️ Reward Title</label>
+            <input class="input-field" id="rewardTitleInput" placeholder="e.g. Your Gift Code">
+        </div>
+
+        <div class="input-group">
+            <label class="input-label">💎 Reward Value</label>
+            <input class="input-field" id="rewardValueInput" placeholder="Code ya Link yahan daalo">
+        </div>
+
+        <button class="save-btn" onclick="saveConfig()">💾 Save Config</button>
+        <div class="success-msg" id="successMsg">✅ Config saved!</div>
+    </div>
+</div>
+
+<script>
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+
+    const tgUser = tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : null;
+    const tgId = tgUser ? String(tgUser.id) : null;
+    const tgName = tgUser ? (tgUser.first_name + (tgUser.last_name ? " " + tgUser.last_name : "")) : "User";
+    const tgPhoto = tgUser ? (tgUser.photo_url || "") : "";
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const botId = urlParams.get("botid") || "default";
+    const BOT_USERNAME = urlParams.get("bot") || "Unio_firstdbot";
+    const isAdmin = urlParams.get("admin") === "true";
+    const adminKey = urlParams.get("key") || "";
+
+    const API_URL = "/api";
+
+    // User card setup
+    document.getElementById("userName").textContent = tgName;
+    document.getElementById("userId").textContent = "ID: " + (tgId || "Unknown");
+    if (tgPhoto) {
+        const img = document.createElement("img");
+        img.src = tgPhoto;
+        img.className = "user-avatar";
+        document.getElementById("avatarEl").replaceWith(img);
+    } else {
+        document.getElementById("avatarEl").textContent = tgName ? tgName[0].toUpperCase() : "?";
+    }
+
+    // ── Admin Panel ──
+    if (isAdmin) {
+        document.getElementById("mainCard").style.display = "none";
+        document.getElementById("adminPanel").style.display = "block";
+        document.getElementById("userCardEl").style.display = "none";
+        loadAdminConfig();
+    } else {
+        startFlow();
+    }
+
+    // ── Device fingerprint ──
+    function getDeviceId() {
+        const scr = window.screen.width + "x" + window.screen.height;
+        const lang = navigator.language || "en";
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+        const cores = String(navigator.hardwareConcurrency || 0);
+        const mem = String(navigator.deviceMemory || 0);
+        const touch = String(navigator.maxTouchPoints || 0);
+        const depth = String(window.screen.colorDepth || 0);
+        const raw = scr + lang + tz + cores + mem + touch + depth;
+        let hash = 0;
+        for (let i = 0; i < raw.length; i++) {
+            hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+            hash = hash & hash;
+        }
+        return "DEV" + Math.abs(hash).toString(36).toUpperCase();
+    }
+
+    function setStep(n, state) {
+        const icon = document.getElementById("s" + n);
+        const text = document.getElementById("t" + n);
+        if (state === "done") {
+            icon.className = "step-icon done";
+            icon.textContent = "✓";
+            text.className = "step-text active";
+        } else if (state === "loading") {
+            icon.className = "step-icon loading";
+            icon.innerHTML = "<span class='loader'></span>";
+            text.className = "step-text active";
+        } else if (state === "error") {
+            icon.className = "step-icon error";
+            icon.textContent = "✕";
+            text.className = "step-text active";
+        }
+    }
+
+    function setProgress(pct) {
+        document.getElementById("progressFill").style.width = pct + "%";
+    }
+
+    function sleep(ms) {
+        return new Promise(function(r) { setTimeout(r, ms); });
+    }
+
+    var channelData = [];
+    var rewardData = {};
+
+    async function startFlow() {
+        if (!tgId) {
+            document.getElementById("statusBadge").textContent = "ERROR";
+            document.getElementById("statusBadge").className = "status-badge failed";
+            document.getElementById("mainSubtitle").textContent = "Telegram se kholo!";
+            document.getElementById("actionBtn").innerHTML = "❌ Open in Telegram";
+            return;
+        }
+
+        // Step 1: Device verify
+        setStep(1, "loading");
+        setProgress(20);
+        const deviceId = getDeviceId();
+
+        try {
+            const resp = await fetch(API_URL + "/check", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    device_id: deviceId,
+                    tg_id: tgId,
+                    tg_name: tgName,
+                    bot_id: botId
+                })
+            });
+            const data = await resp.json();
+
+            if (data.status === "failed") {
+                setStep(1, "error");
+                document.getElementById("statusBadge").className = "status-badge failed";
+                document.getElementById("statusBadge").textContent = "BLOCKED";
+                document.getElementById("mainSubtitle").textContent = "Yeh device kisi aur account se linked hai!";
+                document.getElementById("actionBtn").innerHTML = "❌ Device Blocked";
+                document.getElementById("actionBtn").disabled = true;
+                setProgress(100);
+                return;
+            }
+
+            setStep(1, "done");
+            setProgress(40);
+            await sleep(500);
+
+        } catch(e) {
+            setStep(1, "error");
+            document.getElementById("mainSubtitle").textContent = "Server error! Try again.";
+            document.getElementById("actionBtn").innerHTML = "🔄 Retry";
+            document.getElementById("actionBtn").disabled = false;
+            document.getElementById("actionBtn").onclick = function() { startFlow(); };
+            return;
+        }
+
+        // Step 2: Load channels config
+        setStep(2, "loading");
+        setProgress(50);
+
+        try {
+            const resp = await fetch(API_URL + "/channels", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ botid: botId, tg_id: tgId })
+            });
+            const data = await resp.json();
+
+            channelData = data.channels || [];
+            rewardData = {
+                type: data.reward_type || "code",
+                title: data.reward_title || "Your Reward",
+                value: data.reward_value || ""
+            };
+
+            if (data.already_claimed) {
+                setStep(2, "done");
+                setStep(3, "done");
+                setProgress(100);
+                showReward(data.reward_type, data.reward_title, data.reward_value);
+                return;
+            }
+
+            if (channelData.length === 0) {
+                setStep(2, "done");
+                setProgress(70);
+                await sleep(300);
+                claimReward();
+                return;
+            }
+
+            // Show channels
+            setStep(2, "done");
+            setProgress(60);
+            showChannels(channelData);
+
+        } catch(e) {
+            setStep(2, "error");
+            document.getElementById("mainSubtitle").textContent = "Config load nahi hua!";
+        }
+    }
+
+    function showChannels(channels) {
+        document.getElementById("mainSubtitle").textContent = "Neeche channels join karo 👇";
+        document.getElementById("channelsList").style.display = "block";
+        document.getElementById("stepsEl").style.display = "none";
+        document.getElementById("progressFill").parentElement.style.display = "none";
+
+        const list = document.getElementById("channelsList");
+        list.innerHTML = "";
+
+        channels.forEach(function(ch, idx) {
+            const div = document.createElement("div");
+            div.className = "channel-item";
+            div.innerHTML = (
+                "<div class='channel-name'>📢 " + ch.name + "</div>" +
+                "<a class='channel-btn' href='" + ch.link + "' target='_blank' id='chBtn" + idx + "' onclick='markJoined(" + idx + ")'>Join</a>"
+            );
+            list.appendChild(div);
+        });
+
+        document.getElementById("actionBtn").innerHTML = "✅ Maine Join Kar Liya";
+        document.getElementById("actionBtn").disabled = false;
+        document.getElementById("actionBtn").onclick = function() { checkAndClaim(); };
+
+        document.getElementById("statusBadge").textContent = "JOIN CHANNELS";
+        document.getElementById("statusBadge").className = "status-badge";
+    }
+
+    function markJoined(idx) {
+        setTimeout(function() {
+            const btn = document.getElementById("chBtn" + idx);
+            if (btn) {
+                btn.textContent = "✓ Joined";
+                btn.className = "channel-btn joined";
+            }
+        }, 2000);
+    }
+
+    async function checkAndClaim() {
+        document.getElementById("actionBtn").disabled = true;
+        document.getElementById("actionBtn").innerHTML = "<span class='loader'></span> Checking...";
+        document.getElementById("channelsList").style.display = "none";
+        document.getElementById("stepsEl").style.display = "block";
+        document.getElementById("progressFill").parentElement.style.display = "block";
+
+        setStep(2, "done");
+        setStep(3, "loading");
+        setProgress(80);
+
+        await sleep(1000);
+        claimReward();
+    }
+
+    async function claimReward() {
+        try {
+            const resp = await fetch(API_URL + "/claim", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    botid: botId,
+                    tg_id: tgId,
+                    tg_name: tgName
+                })
+            });
+            const data = await resp.json();
+
+            setStep(3, "done");
+            setProgress(100);
+            await sleep(300);
+
+            showReward(data.reward_type, data.reward_title, data.reward_value);
+
+        } catch(e) {
+            setStep(3, "error");
+            document.getElementById("mainSubtitle").textContent = "Claim failed! Try again.";
+            document.getElementById("actionBtn").innerHTML = "🔄 Retry";
+            document.getElementById("actionBtn").disabled = false;
+            document.getElementById("actionBtn").onclick = function() { claimReward(); };
+        }
+    }
+
+    function showReward(type, title, value) {
+        document.getElementById("stepsEl").style.display = "none";
+        document.getElementById("progressFill").parentElement.style.display = "none";
+        document.getElementById("actionBtn").style.display = "none";
+
+        document.getElementById("statusBadge").className = "status-badge success";
+        document.getElementById("statusBadge").textContent = "CLAIMED ✅";
+        document.getElementById("mainSubtitle").textContent = "Congratulations! 🎉";
+
+        document.getElementById("rewardTitle").textContent = "🎁 " + (title || "Your Reward");
+        document.getElementById("rewardValue").textContent = value || "-";
+
+        if (type === "link") {
+            document.getElementById("copyBtn").textContent = "🔗 Open Link";
+            document.getElementById("copyBtn").onclick = function() {
+                window.open(value, "_blank");
+            };
+        } else {
+            document.getElementById("copyBtn").textContent = "📋 Copy";
+            document.getElementById("copyBtn").onclick = function() { copyReward(); };
+        }
+
+        document.getElementById("rewardBox").style.display = "block";
+    }
+
+    function copyReward() {
+        const val = document.getElementById("rewardValue").textContent;
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(val);
+        }
+        document.getElementById("copyBtn").textContent = "✅ Copied!";
+        setTimeout(function() {
+            document.getElementById("copyBtn").textContent = "📋 Copy";
+        }, 2000);
+    }
+
+    // ── Admin Functions ──
+    var chCount = 1;
+
+    function addChannel() {
+        const idx = chCount;
+        const div = document.createElement("div");
+        div.className = "channel-add-row";
+        div.id = "chRow" + idx;
+        div.innerHTML = (
+            "<input class='input-field' placeholder='Channel Name' id='chName" + idx + "'>" +
+            "<input class='input-field' placeholder='https://t.me/...' id='chLink" + idx + "'>" +
+            "<button class='remove-btn' onclick='removeCh(" + idx + ")'>✕</button>"
+        );
+        document.getElementById("channelInputs").appendChild(div);
+        chCount++;
+    }
+
+    function removeCh(idx) {
+        const row = document.getElementById("chRow" + idx);
+        if (row) row.remove();
+    }
+
+    async function saveConfig() {
+        const channels = [];
+        for (let i = 0; i < chCount + 1; i++) {
+            const nameEl = document.getElementById("chName" + i);
+            const linkEl = document.getElementById("chLink" + i);
+            if (nameEl && linkEl && nameEl.value && linkEl.value) {
+                channels.push({ name: nameEl.value.trim(), link: linkEl.value.trim() });
+            }
+        }
+
+        const rewardType = document.getElementById("rewardType").value;
+        const rewardTitle = document.getElementById("rewardTitleInput").value;
+        const rewardValue = document.getElementById("rewardValueInput").value;
+
+        try {
+            const resp = await fetch(API_URL + "/admin", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    key: adminKey,
+                    botid: botId,
+                    action: "set_all",
+                    channels: channels,
+                    reward_type: rewardType,
+                    reward_title: rewardTitle,
+                    reward_value: rewardValue
+                })
+            });
+            const data = await resp.json();
+            if (data.success) {
+                document.getElementById("successMsg").style.display = "block";
+                setTimeout(function() {
+                    document.getElementById("successMsg").style.display = "none";
+                }, 3000);
+            }
+        } catch(e) {
+            alert("Error! Try again.");
+        }
+    }
+
+    async function loadAdminConfig() {
+        try {
+            const resp = await fetch(API_URL + "/admin?key=" + adminKey + "&botid=" + botId + "&action=get");
+            const data = await resp.json();
+            if (data.config) {
+                const cfg = data.config;
+                if (cfg.reward_type) document.getElementById("rewardType").value = cfg.reward_type;
+                if (cfg.reward_title) document.getElementById("rewardTitleInput").value = cfg.reward_title;
+                if (cfg.reward_value) document.getElementById("rewardValueInput").value = cfg.reward_value;
+
+                if (cfg.channels && cfg.channels.length > 0) {
+                    document.getElementById("channelInputs").innerHTML = "";
+                    cfg.channels.forEach(function(ch, i) {
+                        const div = document.createElement("div");
+                        div.className = "channel-add-row";
+                        div.id = "chRow" + i;
+                        div.innerHTML = (
+                            "<input class='input-field' placeholder='Channel Name' id='chName" + i + "' value='" + ch.name + "'>" +
+                            "<input class='input-field' placeholder='https://t.me/...' id='chLink" + i + "' value='" + ch.link + "'>" +
+                            "<button class='remove-btn' onclick='removeCh(" + i + ")'>✕</button>"
+                        );
+                        document.getElementById("channelInputs").appendChild(div);
+                        chCount = i + 1;
+                    });
+                }
+            }
+        } catch(e) {}
+    }
+</script>
+</body>
+</html>
