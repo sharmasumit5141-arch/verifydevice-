@@ -29,15 +29,18 @@ module.exports = async (req, res) => {
     const db = await getDB();
     const col = db.collection('verifications');
 
-    // Sirf deviceId check karo is botId ke liye
-    const deviceExists = await col.findOne({ botId, deviceId });
+    // botId + deviceId se check karo
+    const existing = await col.findOne({ botId, deviceId });
 
-    if (deviceExists) {
-      if (deviceExists.tgId === tgId) {
+    if (existing) {
+      if (existing.tgId === tgId) {
         // Same device, same tgId — already verified
-        return res.json({ status: 'already_verified', message: 'Already verified' });
+        return res.json({
+          status: 'already_verified',
+          message: 'Already verified'
+        });
       } else {
-        // Same device, alag tgId — FAIL
+        // Same device, different tgId — FAIL
         await col.insertOne({
           botId,
           tgId,
@@ -46,11 +49,14 @@ module.exports = async (req, res) => {
           verifiedAt: new Date(),
           status: 'already_device'
         });
-        return res.json({ status: 'already_device', message: 'Verification failed already link with another account' });
+        return res.json({
+          status: 'already_device',
+          message: 'Verification failed already link with another account'
+        });
       }
     }
 
-    // Device naya hai — verify karo
+    // Naya device is botId ke liye — success
     await col.insertOne({
       botId,
       tgId,
@@ -60,7 +66,10 @@ module.exports = async (req, res) => {
       status: 'success'
     });
 
-    return res.json({ status: 'success', message: 'Verified successfully' });
+    return res.json({
+      status: 'success',
+      message: 'Verified successfully'
+    });
 
   } catch (err) {
     console.error(err);
