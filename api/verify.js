@@ -32,12 +32,28 @@ module.exports = async (req, res) => {
     // Check Telegram ID for this bot
     const tgExists = await col.findOne({ botId, tgId });
     if (tgExists) {
+      await col.insertOne({
+        botId,
+        tgId,
+        deviceId,
+        username: username || 'Unknown',
+        verifiedAt: new Date(),
+        status: 'already_tgid'
+      });
       return res.json({ status: 'already_tgid', message: 'Telegram ID already verified' });
     }
 
     // Check Device ID for this bot
     const deviceExists = await col.findOne({ botId, deviceId });
     if (deviceExists) {
+      await col.insertOne({
+        botId,
+        tgId,
+        deviceId,
+        username: username || 'Unknown',
+        verifiedAt: new Date(),
+        status: 'already_device'
+      });
       return res.json({ status: 'already_device', message: 'Device already verified' });
     }
 
@@ -58,4 +74,4 @@ module.exports = async (req, res) => {
     return res.status(500).json({ status: 'error', message: 'Server error' });
   }
 };
-                       
+
