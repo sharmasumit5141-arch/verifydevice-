@@ -40,7 +40,7 @@ module.exports = async (req, res) => {
         verifiedAt: new Date(),
         status: 'already_tgid'
       });
-      return res.json({ status: 'already_tgid', message: 'Telegram ID already verified' });
+      return res.json({ status: 'already_tgid', message: 'Verification failed already link with another account' });
     }
 
     // Check Device ID for this bot
@@ -54,7 +54,7 @@ module.exports = async (req, res) => {
         verifiedAt: new Date(),
         status: 'already_device'
       });
-      return res.json({ status: 'already_device', message: 'Device already verified' });
+      return res.json({ status: 'already_device', message: 'Verification failed already link with another account' });
     }
 
     // Save new verification
