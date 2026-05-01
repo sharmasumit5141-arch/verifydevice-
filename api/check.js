@@ -1,87 +1,54 @@
-// api/check.js
-const { getDb } = require('../lib/mongo');
+const mongoose = require('mongoose');
 
-module.exports = async (req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  res.setHeader('Access-Control-Allow-Origin', '*');
+// Define Schema
+const DeviceSchema = new mongoose.Schema({
+    tgid: String,
+    botid: String,
+    deviceid: String
+});
 
-  // Support both GET query params and POST body
-  const botid = req.query.botid || req.body?.botid;
-  const tgid  = req.query.tgid  || req.body?.tgid;
-  const deviceId = req.query.deviceid || req.body?.deviceid;
+const Device = mongoose.models.Device || mongoose.model('Device', DeviceSchema);
 
-  if (!botid || !tgid) {
-    return res.status(400).json({
-      status: 'error',
-      code: 400,
-      message: 'botid and tgid are required'
-    });
-  }
-
-  try {
-    const db = await getDb();
-    // Each bot gets its own collection: bot_987654321
-    const col = db.collection(`bot_${botid}`);
-
-    // Find record by tgid
-    const record = await col.findOne({ tgid: String(tgid) });
-
-    // ─── PENDING: tgid never visited verification page ───────────────────
-    if (!record) {
-      return res.status(200).json({
-        status: 'pending',
-        code: 202,
-        message: 'User has not started verification yet',
-        tgid,
-        botid
-      });
-    }
-
-    // ─── SUCCESS case 1: Same tgid, different botid (bot changed) ────────
-    // ─── SUCCESS case 2: New tgid + new botid combo ───────────────────────
-    // ─── FAIL: Same botid + same deviceId but different tgid ─────────────
-
-    const deviceMatches  = record.deviceId === deviceId;
-    const botMatches     = record.botid    === String(botid);
-
-    // Check if another tgid already owns this deviceId+botid combo
-    if (deviceId) {
-      const sameDevice = await col.findOne({
-        deviceId: deviceId,
-        botid: String(botid),
-        tgid: { $ne: String(tgid) }
-      });
-
-      if (sameDevice) {
-        return res.status(200).json({
-          status: 'fail',
-          code: 403,
-          message: 'Device already registered to a different Telegram account',
-          tgid,
-          botid,
-          registered_tgid: sameDevice.tgid
-        });
-      }
-    }
-
-    // All good — success
-    return res.status(200).json({
-      status: 'success',
-      code: 200,
-      message: 'Device verification successful',
-      tgid,
-      botid,
-      deviceId: record.deviceId,
-      verified_at: record.createdAt
-    });
-
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({
-      status: 'error',
-      code: 500,
-      message: 'Internal server error',
-      detail: err.message
-    });
-  }
+// DB Connection
+const connectDB = async () => {
+    if (mongoose.connections[0].readyState) return;
+    await mongoose.connect(process.env.MONGO_URI);
 };
+
+export default async function handler(req, res) {
+    await connectDB();
+    const { botid, tgid, deviceid } = req.query;
+
+    if (!botid || !tgid || !deviceid) {
+        return res.status(400).json({ success: false, message: "Missing data" });
+    }
+
+    try {
+        // Find if this device is already registered to THIS bot
+        const existingDevice = await Device.findOne({ botid, deviceid });
+
+        if (existingDevice) {
+            // Check if the TG ID matches the one already saved for this device
+            if (existingDevice.tgid === tgid) {
+                return res.json({ success: true, message: "Device already verified" });
+            } else {
+                return res.json({ success: false, message: "Device already linked to another account on this bot" });
+            }
+        }
+
+        // Check if this TG ID is already registered to THIS bot on a different device (Optional)
+        const existingUser = await Device.findOne({ botid, tgid });
+        if (existingUser) {
+            return res.json({ success: true, message: "User already verified" });
+        }
+
+        // New Registration
+        const newEntry = new Device({ tgid, botid, deviceid });
+        await newEntry.save();
+        
+        return res.json({ success: true, message: "New device verified successfully" });
+
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+}
