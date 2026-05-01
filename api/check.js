@@ -1,20 +1,14 @@
 const mongoose = require('mongoose');
 
-// Schema for Successful Verifications
+// Schemas
 const AuthSchema = new mongoose.Schema({
-    tgid: String,
-    botid: String,
-    deviceid: String,
+    tgid: String, botid: String, deviceid: String,
     verifiedAt: { type: Date, default: Date.now }
 });
 
-// Schema for Cheating Attempts (Fail Logs)
 const FailLogSchema = new mongoose.Schema({
-    attemptedTgid: String,
-    originalTgid: String,
-    botid: String,
-    deviceid: String,
-    timestamp: { type: Date, default: Date.now },
+    attemptedTgid: String, originalTgid: String, botid: String,
+    deviceid: String, timestamp: { type: Date, default: Date.now },
     reason: String
 });
 
@@ -30,51 +24,58 @@ export default async function handler(req, res) {
     await connectDB();
     const { botid, tgid, deviceid } = req.query;
 
-    if (!botid || !tgid) {
-        return res.status(400).json({ status: "fail", message: "Missing Parameters" });
-    }
+    if (!botid || !tgid) return res.status(400).json({ status: "fail", message: "Missing Parameters" });
 
-    // Bot status check (When no deviceid is sent)
+    // Bot check (without deviceid)
     if (!deviceid) {
         const record = await Auth.findOne({ botid, tgid });
-        if (record) return res.json({ status: "success", message: "Verified" });
-        return res.json({ status: "pending", message: "Not Opened" });
+        return record ? res.json({ status: "success", message: "Verified" }) : res.json({ status: "pending", message: "Not Opened" });
     }
 
     try {
-        // 1. HARDWARE LOCK LOGIC (Fail Case)
-        const hardwareLocked = await Auth.findOne({ botid, deviceid });
+        // 1. DATABASE CHECK: Kya ye deviceid kisi aur tgid ke paas hai?
+        const hardwareCheck = await Auth.findOne({ botid, deviceid });
 
-        if (hardwareLocked) {
-            if (hardwareLocked.tgid !== tgid) {
-                // SAVE THE FRAUD ATTEMPT
-                const logFail = new FailLog({
-                    attemptedTgid: tgid,
-                    originalTgid: hardwareLocked.tgid,
-                    botid: botid,
-                    deviceid: deviceid,
-                    reason: "Multi-account detected on same hardware"
-                });
-                await logFail.save();
+        if (hardwareCheck) {
+            // Agar hardware mil gaya lekin TGID alag hai -> CHEATER DETECTED
+            if (hardwareCheck.tgid !== tgid) {
+                
+                // Pehle check karo kya is cheater ka log pehle se saved hai? (Duplication rokne ke liye)
+                const alreadyLogged = await FailLog.findOne({ attemptedTgid: tgid, deviceid });
+                
+                if (!alreadyLogged) {
+                    const logFail = new FailLog({
+                        attemptedTgid: tgid,
+                        originalTgid: hardwareCheck.tgid,
+                        botid: botid,
+                        deviceid: deviceid,
+                        reason: "Hardware ID Conflict (Multi-Account)"
+                    });
+                    await logFail.save();
+                }
 
                 return res.json({ 
                     status: "fail", 
-                    message: "Security Alert: This device is already linked to another account." 
+                    message: "Security Alert: This hardware is locked to another account." 
                 });
             } else {
-                return res.json({ status: "success", message: "Device Verified" });
+                // Same hardware, same user -> Already Verified
+                return res.json({ status: "success", message: "Verified" });
             }
         }
 
-        // 2. NEW REGISTRATION
-        const userExists = await Auth.findOne({ botid, tgid });
-        if (userExists) return res.json({ status: "success", message: "User already verified" });
+        // 2. AGAR HARDWARE NAYA HAI: Toh check karo kya ye TGID pehle kisi aur hardware se verify toh nahi hua?
+        const userCheck = await Auth.findOne({ botid, tgid });
+        if (userCheck) {
+            return res.json({ status: "success", message: "User already verified" });
+        }
 
+        // 3. SAB KUCH SAHI HAI: Toh naya record save karo
         const newAuth = new Auth({ tgid, botid, deviceid });
         await newAuth.save();
         return res.json({ status: "success", message: "Verification Successful" });
 
     } catch (err) {
-        return res.status(500).json({ status: "error", message: "Server Error" });
+        return res.status(500).json({ status: "error", message: "DB Error" });
     }
-    }
+                                  }
