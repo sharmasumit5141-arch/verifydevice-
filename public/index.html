@@ -16,10 +16,9 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 0;
   }
 
-  /* TOP USER CARD */
+  /* ── TOP USER CARD ─────────────────────────────────────────────────────── */
   .user-card {
     width: 100%;
     background: #1a1d2e;
@@ -31,470 +30,429 @@
   }
 
   .user-avatar {
-    width: 52px;
-    height: 52px;
+    width: 52px; height: 52px;
     border-radius: 50%;
     background: linear-gradient(135deg, #667eea, #764ba2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    flex-shrink: 0;
-    overflow: hidden;
-  }
-
-  .user-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .user-info { flex: 1 }
-
-  .user-name {
-    font-size: 16px;
-    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 700;
+    flex-shrink: 0; overflow: hidden;
     color: #fff;
-    margin-bottom: 3px;
   }
 
-  .user-id {
-    font-size: 13px;
-    color: #8b8fa8;
-  }
+  .user-info { flex: 1; }
+  .user-name { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 3px; }
+  .user-id   { font-size: 13px; color: #8b8fa8; }
 
-  .verifying-badge {
-    background: #2d2f4a;
-    border: 1px solid #4a4d6a;
+  .badge {
     border-radius: 20px;
     padding: 6px 14px;
-    font-size: 12px;
-    font-weight: 700;
-    color: #a0a4c8;
-    letter-spacing: 1px;
-    text-transform: uppercase;
+    font-size: 12px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase;
+    background: #2d2f4a; border: 1px solid #4a4d6a; color: #a0a4c8;
+    transition: all 0.4s;
   }
+  .badge.verified  { background: rgba(34,197,94,0.15);  border-color: rgba(34,197,94,0.4);  color: #22c55e; }
+  .badge.failed    { background: rgba(239,68,68,0.15);   border-color: rgba(239,68,68,0.4);  color: #ef4444; }
+  .badge.warning   { background: rgba(245,158,11,0.15);  border-color: rgba(245,158,11,0.4); color: #f59e0b; }
 
-  .verifying-badge.success-badge {
-    background: rgba(34,197,94,0.15);
-    border-color: rgba(34,197,94,0.4);
-    color: #22c55e;
-  }
-
-  .verifying-badge.failed-badge {
-    background: rgba(239,68,68,0.15);
-    border-color: rgba(239,68,68,0.4);
-    color: #ef4444;
-  }
-
-  /* MAIN CARD */
+  /* ── MAIN CARD ─────────────────────────────────────────────────────────── */
   .main-card {
     width: calc(100% - 32px);
     margin: 20px 16px;
     background: #1a1d2e;
     border-radius: 20px;
     padding: 32px 24px 28px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    display: flex; flex-direction: column; align-items: center;
   }
 
-  /* Shield Icon */
   .shield-wrap {
-    width: 80px;
-    height: 80px;
-    background: linear-gradient(135deg, #6c63ff, #8b5cf6);
+    width: 80px; height: 80px;
     border-radius: 22px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 38px;
-    margin-bottom: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 38px; margin-bottom: 20px;
+    background: linear-gradient(135deg, #6c63ff, #8b5cf6);
     box-shadow: 0 8px 32px rgba(108,99,255,0.35);
+    transition: all 0.4s;
   }
+  .shield-wrap.success { background: linear-gradient(135deg,#22c55e,#16a34a); box-shadow: 0 8px 32px rgba(34,197,94,0.35); }
+  .shield-wrap.failed  { background: linear-gradient(135deg,#ef4444,#dc2626); box-shadow: 0 8px 32px rgba(239,68,68,0.35); }
+  .shield-wrap.warning { background: linear-gradient(135deg,#f59e0b,#d97706); box-shadow: 0 8px 32px rgba(245,158,11,0.35); }
 
-  .shield-wrap.success { background: linear-gradient(135deg, #22c55e, #16a34a); box-shadow: 0 8px 32px rgba(34,197,94,0.35); }
-  .shield-wrap.failed { background: linear-gradient(135deg, #ef4444, #dc2626); box-shadow: 0 8px 32px rgba(239,68,68,0.35); }
+  .main-title    { font-size: 24px; font-weight: 800; text-align: center; margin-bottom: 8px; }
+  .main-subtitle { font-size: 14px; color: #8b8fa8; text-align: center; line-height: 1.6; margin-bottom: 32px; }
 
-  .main-title {
-    font-size: 24px;
-    font-weight: 800;
-    color: #fff;
-    margin-bottom: 8px;
-    text-align: center;
-  }
-
-  .main-subtitle {
-    font-size: 14px;
-    color: #8b8fa8;
-    text-align: center;
-    line-height: 1.6;
-    margin-bottom: 32px;
-  }
-
-  /* Steps */
+  /* ── STEPS ─────────────────────────────────────────────────────────────── */
   .steps { width: 100%; margin-bottom: 28px; display: flex; flex-direction: column; gap: 16px; }
 
-  .step {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
+  .step { display: flex; align-items: center; gap: 14px; }
 
   .step-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    font-size: 15px;
-    transition: all 0.4s ease;
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 15px; font-weight: 700;
+    transition: all 0.4s;
   }
+  .step-icon.pending { background: #2a2d4a; border: 2px solid #3a3d5a; color: #8b8fa8; }
+  .step-icon.loading { background: #2d2f5a; border: 2px solid #6c63ff; }
+  .step-icon.done    { background: #22c55e; border: 2px solid #22c55e; color: #fff; }
+  .step-icon.error   { background: #ef4444; border: 2px solid #ef4444; color: #fff; }
 
-  .step-icon.pending {
-    background: #2a2d4a;
-    border: 2px solid #3a3d5a;
-    color: #8b8fa8;
-  }
-
-  .step-icon.loading {
-    background: #2d2f5a;
-    border: 2px solid #6c63ff;
-  }
-
-  .step-icon.done {
-    background: #22c55e;
-    border: 2px solid #22c55e;
-    color: white;
-  }
-
-  .step-icon.error {
-    background: #ef4444;
-    border: 2px solid #ef4444;
-    color: white;
-  }
-
-  /* Spinner inside step */
   .mini-spinner {
-    width: 16px;
-    height: 16px;
+    width: 16px; height: 16px;
     border: 2px solid rgba(108,99,255,0.3);
     border-top-color: #6c63ff;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
   }
-
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  .step-label {
-    font-size: 15px;
-    font-weight: 600;
-    color: #fff;
-  }
-
+  .step-label       { font-size: 15px; font-weight: 600; color: #fff; }
   .step-label.muted { color: #8b8fa8; }
 
-  /* Progress bar */
+  /* ── PROGRESS ──────────────────────────────────────────────────────────── */
   .progress-wrap {
-    width: 100%;
-    height: 4px;
-    background: #2a2d4a;
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 20px;
+    width: 100%; height: 4px;
+    background: #2a2d4a; border-radius: 4px;
+    overflow: hidden; margin-bottom: 20px;
   }
-
   .progress-bar {
     height: 100%;
-    background: linear-gradient(90deg, #6c63ff, #a78bfa);
-    border-radius: 4px;
-    width: 0%;
+    background: linear-gradient(90deg,#6c63ff,#a78bfa);
+    border-radius: 4px; width: 0%;
     transition: width 0.5s ease;
   }
+  .progress-bar.red    { background: linear-gradient(90deg,#ef4444,#f87171); }
+  .progress-bar.green  { background: linear-gradient(90deg,#22c55e,#4ade80); }
+  .progress-bar.yellow { background: linear-gradient(90deg,#f59e0b,#fcd34d); }
 
-  /* Result message */
-  .result-msg {
+  /* ── RESULT BOXES ──────────────────────────────────────────────────────── */
+  .result-box {
     display: none;
     width: 100%;
-    border-radius: 12px;
-    padding: 14px 16px;
-    text-align: center;
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 1.5;
-    margin-bottom: 8px;
-  }
-
-  .result-msg.success {
-    background: rgba(34,197,94,0.1);
-    border: 1px solid rgba(34,197,94,0.3);
-    color: #22c55e;
-  }
-
-  .result-msg.failed {
-    background: rgba(239,68,68,0.1);
-    border: 1px solid rgba(239,68,68,0.3);
-    color: #ef4444;
-  }
-
-  .result-msg.warning {
-    background: rgba(245,158,11,0.1);
-    border: 1px solid rgba(245,158,11,0.3);
-    color: #f59e0b;
-  }
-
-  /* VPN block */
-  .vpn-block {
-    display: none;
-    width: 100%;
-    background: rgba(239,68,68,0.1);
-    border: 1px solid rgba(239,68,68,0.3);
-    border-radius: 12px;
-    padding: 20px;
-    text-align: center;
+    border-radius: 14px;
+    padding: 18px 16px;
     margin-bottom: 12px;
+    animation: fadeUp 0.3s ease;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
-  .vpn-block .vpn-icon { font-size: 32px; margin-bottom: 10px; }
-  .vpn-block h3 { color: #ef4444; font-size: 16px; margin-bottom: 6px; }
-  .vpn-block p { color: #8b8fa8; font-size: 13px; line-height: 1.5; }
+  .result-box.success { background: rgba(34,197,94,0.08);  border: 1px solid rgba(34,197,94,0.3); }
+  .result-box.failed  { background: rgba(239,68,68,0.08);  border: 1px solid rgba(239,68,68,0.3); }
+  .result-box.warning { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.3); }
+
+  .result-icon    { font-size: 28px; text-align: center; margin-bottom: 8px; }
+  .result-title   { font-size: 15px; font-weight: 700; text-align: center; margin-bottom: 6px; }
+  .result-title.green  { color: #22c55e; }
+  .result-title.red    { color: #ef4444; }
+  .result-title.yellow { color: #f59e0b; }
+
+  .result-msg { font-size: 13px; color: #8b8fa8; text-align: center; line-height: 1.6; }
+
+  /* Device ID chip */
+  .device-chip {
+    display: none;
+    margin-top: 12px;
+    background: #0f1117;
+    border: 1px solid #2a2d4a;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 12px;
+    font-family: monospace;
+    color: #a78bfa;
+    text-align: center;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    width: 100%;
+    word-break: break-all;
+  }
+  .device-chip:hover { border-color: #6c63ff; }
+  .device-chip-label { font-size: 10px; color: #8b8fa8; letter-spacing: 2px; margin-bottom: 4px; text-transform: uppercase; }
 
   /* Footer */
-  .footer {
-    margin-top: 8px;
-    font-size: 13px;
-    color: #8b8fa8;
-  }
-
-  .footer span {
-    color: #6c63ff;
-    font-weight: 700;
-  }
+  .footer { margin-top: 12px; font-size: 13px; color: #8b8fa8; }
+  .footer span { color: #6c63ff; font-weight: 700; }
 </style>
 </head>
 <body>
 
 <!-- TOP USER CARD -->
 <div class="user-card">
-  <div class="user-avatar" id="avatar">😊</div>
+  <div class="user-avatar" id="avatar">?</div>
   <div class="user-info">
-    <div class="user-name" id="username">Loading...</div>
-    <div class="user-id" id="tgid-display">ID: —</div>
+    <div class="user-name" id="username-display">Loading...</div>
+    <div class="user-id"   id="tgid-display">ID: —</div>
   </div>
-  <div class="verifying-badge" id="badge">VERIFYING</div>
+  <div class="badge" id="badge">VERIFYING</div>
 </div>
 
 <!-- MAIN CARD -->
 <div class="main-card">
 
   <div class="shield-wrap" id="shield">🛡️</div>
-  <div class="main-title" id="main-title">Device Verification</div>
+  <div class="main-title"    id="main-title">Device Verification</div>
   <div class="main-subtitle" id="main-subtitle">Verifying your device automatically.<br>Please wait...</div>
 
   <!-- Steps -->
   <div class="steps">
     <div class="step">
-      <div class="step-icon pending" id="step1-icon">1</div>
-      <div class="step-label muted" id="step1-label">Collecting device info</div>
+      <div class="step-icon pending" id="s1">1</div>
+      <div class="step-label muted"  id="l1">Collecting device info</div>
     </div>
     <div class="step">
-      <div class="step-icon pending" id="step2-icon">2</div>
-      <div class="step-label muted" id="step2-label">Generating fingerprint</div>
+      <div class="step-icon pending" id="s2">2</div>
+      <div class="step-label muted"  id="l2">Checking network</div>
     </div>
     <div class="step">
-      <div class="step-icon pending" id="step3-icon">3</div>
-      <div class="step-label muted" id="step3-label">Verifying with server</div>
+      <div class="step-icon pending" id="s3">3</div>
+      <div class="step-label muted"  id="l3">Verifying with server</div>
     </div>
   </div>
 
   <!-- Progress -->
   <div class="progress-wrap">
-    <div class="progress-bar" id="progress"></div>
+    <div class="progress-bar" id="progress-bar"></div>
   </div>
 
-  <!-- VPN Block -->
-  <div class="vpn-block" id="vpn-block">
-    <div class="vpn-icon">🛡️</div>
-    <h3>VPN / Proxy Detected</h3>
-    <p>Please disable your VPN or proxy connection and try again.</p>
+  <!-- Result box (hidden initially) -->
+  <div class="result-box" id="result-box">
+    <div class="result-icon"  id="result-icon"></div>
+    <div class="result-title" id="result-title"></div>
+    <div class="result-msg"   id="result-msg"></div>
+    <!-- Device ID chip (shown on success) -->
+    <div class="device-chip" id="device-chip" onclick="copyDeviceId()">
+      <div class="device-chip-label">Device ID — tap to copy</div>
+      <div id="device-id-val"></div>
+    </div>
   </div>
-
-  <!-- Result -->
-  <div class="result-msg" id="result-msg"></div>
 
   <div class="footer">Powered by <span>UNIO WALLET</span> ✅</div>
 </div>
 
 <script>
-const params = new URLSearchParams(window.location.search);
-const botId = params.get('botid') || '';
-const username = params.get('username') || 'Unknown';
-const tgId = params.get('tgid') || '';
+  // ── URL Params ─────────────────────────────────────────────────────────────
+  const params   = new URLSearchParams(window.location.search);
+  const botId    = params.get('botid')    || '';
+  const tgId     = params.get('tgid')     || '';
+  const username = params.get('username') || 'Unknown';
 
-// Set user info
-document.getElementById('username').textContent = username;
-document.getElementById('tgid-display').textContent = 'ID: ' + tgId;
-const av = document.getElementById('avatar');
-if (username && username !== 'Unknown') av.textContent = username.charAt(0).toUpperCase();
+  // ── Set top card ───────────────────────────────────────────────────────────
+  document.getElementById('username-display').textContent = username;
+  document.getElementById('tgid-display').textContent     = 'ID: ' + (tgId || '—');
+  document.getElementById('avatar').textContent           = username !== 'Unknown' ? username.charAt(0).toUpperCase() : '?';
 
-// Helpers
-function setStep(n, state) {
-  const icon = document.getElementById('step' + n + '-icon');
-  const label = document.getElementById('step' + n + '-label');
-  icon.className = 'step-icon ' + state;
-  label.className = 'step-label' + (state === 'pending' ? ' muted' : '');
-  if (state === 'loading') icon.innerHTML = '<div class="mini-spinner"></div>';
-  else if (state === 'done') icon.innerHTML = '✓';
-  else if (state === 'error') icon.innerHTML = '✗';
-  else icon.innerHTML = n;
-}
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const $ = id => document.getElementById(id);
 
-function setProgress(p) {
-  document.getElementById('progress').style.width = p + '%';
-}
-
-function setBadge(text, cls) {
-  const b = document.getElementById('badge');
-  b.textContent = text;
-  b.className = 'verifying-badge ' + (cls || '');
-}
-
-function setShield(cls) {
-  const s = document.getElementById('shield');
-  s.className = 'shield-wrap ' + (cls || '');
-  if (cls === 'success') s.textContent = '✅';
-  else if (cls === 'failed') s.textContent = '❌';
-}
-
-function showResult(type, msg) {
-  const r = document.getElementById('result-msg');
-  r.className = 'result-msg ' + type;
-  r.textContent = msg;
-  r.style.display = 'block';
-}
-
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-// Device fingerprint
-function getDeviceId() {
-  const data = [
-    navigator.userAgent,
-    navigator.language,
-    screen.colorDepth,
-    screen.width + 'x' + screen.height,
-    new Date().getTimezoneOffset(),
-    navigator.hardwareConcurrency || '',
-    navigator.platform || ''
-  ].join('|');
-  let hash = 0;
-  for (let i = 0; i < data.length; i++) {
-    hash = ((hash << 5) - hash) + data.charCodeAt(i);
-    hash = hash & hash;
-  }
-  return 'DEV-' + Math.abs(hash).toString(16).toUpperCase().padStart(8, '0');
-}
-
-async function checkVPN() {
-  try {
-    const res = await fetch('https://ip-api.com/json/?fields=proxy,hosting');
-    const d = await res.json();
-    return d.proxy || d.hosting;
-  } catch { return false; }
-}
-
-async function verify() {
-  if (!botId || !tgId) {
-    setShield('failed');
-    setBadge('ERROR', 'failed-badge');
-    showResult('failed', '❌ Invalid verification link. Missing parameters.');
-    return;
+  function setStep(n, state) {
+    const icon  = $('s' + n);
+    const label = $('l' + n);
+    icon.className  = 'step-icon ' + state;
+    label.className = 'step-label' + (state === 'pending' ? ' muted' : '');
+    if      (state === 'loading') icon.innerHTML = '<div class="mini-spinner"></div>';
+    else if (state === 'done')    icon.innerHTML = '✓';
+    else if (state === 'error')   icon.innerHTML = '✗';
+    else icon.innerHTML = n;
   }
 
-  // Step 1 — Collect device info
-  setStep(1, 'loading');
-  setProgress(10);
-  await sleep(800);
-
-  const isVPN = await checkVPN();
-  if (isVPN) {
-    setStep(1, 'error');
-    setShield('failed');
-    setBadge('BLOCKED', 'failed-badge');
-    document.getElementById('vpn-block').style.display = 'block';
-    document.getElementById('main-subtitle').textContent = 'VPN or proxy detected. Please disable it.';
-    setProgress(100);
-    return;
+  function setProgress(pct, color) {
+    const bar = $('progress-bar');
+    bar.style.width = pct + '%';
+    bar.className   = 'progress-bar' + (color ? ' ' + color : '');
   }
 
-  setStep(1, 'done');
-  setProgress(33);
-  await sleep(600);
+  function setBadge(text, cls) {
+    $('badge').textContent = text;
+    $('badge').className   = 'badge' + (cls ? ' ' + cls : '');
+  }
 
-  // Step 2 — Generate fingerprint
-  setStep(2, 'loading');
-  await sleep(700);
-  const deviceId = getDeviceId();
-  setStep(2, 'done');
-  setProgress(66);
-  await sleep(500);
+  function setShield(emoji, cls) {
+    $('shield').textContent = emoji;
+    $('shield').className   = 'shield-wrap' + (cls ? ' ' + cls : '');
+  }
 
-  // Step 3 — Verify with server
-  setStep(3, 'loading');
-  await sleep(800);
+  function showResult(boxType, icon, titleText, titleColor, msg, deviceId) {
+    const box = $('result-box');
+    box.className        = 'result-box ' + boxType;
+    box.style.display    = 'block';
+    $('result-icon').textContent        = icon;
+    $('result-title').textContent       = titleText;
+    $('result-title').className         = 'result-title ' + titleColor;
+    $('result-msg').textContent         = msg;
 
-  try {
-    const res = await fetch('/api/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ botId, tgId, deviceId, username })
+    if (deviceId) {
+      $('device-id-val').textContent   = deviceId;
+      $('device-chip').style.display   = 'block';
+    }
+  }
+
+  function copyDeviceId() {
+    const val = $('device-id-val').textContent;
+    navigator.clipboard.writeText(val).then(() => {
+      $('device-chip').querySelector('.device-chip-label').textContent = '✅ Copied!';
+      setTimeout(() => {
+        $('device-chip').querySelector('.device-chip-label').textContent = 'Device ID — tap to copy';
+      }, 2000);
     });
-    const data = await res.json();
+  }
 
-    setProgress(100);
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-    if (data.status === 'success') {
-      setStep(3, 'done');
-      setShield('success');
-      setBadge('VERIFIED', 'success-badge');
-      document.getElementById('main-title').textContent = 'Verified!';
-      document.getElementById('main-subtitle').textContent = 'Your device has been verified successfully.';
-      showResult('success', '✅ Verification successful! You may now proceed.');
+  // ── Device Fingerprint (botId bhi seed mein — har bot ka alag device ID) ──
+  function getDeviceId() {
+    const raw = [
+      botId,                              // ← bot ID seed mein — alag bot = alag ID
+      navigator.userAgent,
+      navigator.language,
+      screen.colorDepth,
+      screen.width + 'x' + screen.height,
+      new Date().getTimezoneOffset(),
+      navigator.hardwareConcurrency || '',
+      navigator.platform || ''
+    ].join('|');
+    let hash = 0;
+    for (let i = 0; i < raw.length; i++) {
+      hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+      hash = hash & hash;
+    }
+    return 'DEV-' + Math.abs(hash).toString(16).toUpperCase().padStart(8, '0');
+  }
 
-    } else if (data.status === 'already_tgid') {
-      setStep(3, 'done');
-      setShield('success');
-      setBadge('VERIFIED', 'success-badge');
-      document.getElementById('main-title').textContent = 'Already Verified';
-      document.getElementById('main-subtitle').textContent = 'This Telegram account is already verified.';
-      showResult('success', '✅ Already verified. You can proceed.');
+  // ── VPN Check ─────────────────────────────────────────────────────────────
+  async function isVPN() {
+    try {
+      const res  = await fetch('https://ip-api.com/json/?fields=proxy,hosting');
+      const data = await res.json();
+      return data.proxy || data.hosting;
+    } catch { return false; }
+  }
 
-    } else if (data.status === 'already_device') {
-      setStep(3, 'error');
-      setShield('failed');
-      setBadge('FAILED', 'failed-badge');
-      document.getElementById('main-title').textContent = 'Device Blocked';
-      document.getElementById('main-subtitle').textContent = 'This device is already registered with another account.';
-      showResult('failed', '❌ Device already registered with another Telegram account.');
+  // ── Main Flow ──────────────────────────────────────────────────────────────
+  async function verify() {
 
-    } else {
-      setStep(3, 'error');
-      setShield('failed');
-      setBadge('FAILED', 'failed-badge');
-      showResult('failed', '❌ Verification failed. Please try again.');
+    // ── Invalid link ───────────────────────────────────────────────────────
+    if (!botId || !tgId) {
+      setShield('❌', 'failed');
+      setBadge('ERROR', 'failed');
+      $('main-title').textContent    = 'Invalid Link';
+      $('main-subtitle').textContent = 'Verification link is broken or missing parameters.';
+      setProgress(100, 'red');
+      showResult('failed', '🔗', 'Invalid Verification Link', 'red',
+        'botid or tgid missing. Please use the correct link from the bot.');
+      return;
     }
 
-  } catch (err) {
-    setStep(3, 'error');
-    setShield('failed');
-    setBadge('ERROR', 'failed-badge');
-    setProgress(100);
-    showResult('failed', '⚠️ Connection error. Please try again.');
-  }
-}
+    // ── Step 1: Collect device info ────────────────────────────────────────
+    setStep(1, 'loading');
+    setProgress(15);
+    await sleep(800);
+    const deviceId = getDeviceId();
+    setStep(1, 'done');
+    setProgress(33);
+    await sleep(500);
 
-setTimeout(verify, 400);
+    // ── Step 2: VPN / Network check ────────────────────────────────────────
+    setStep(2, 'loading');
+    await sleep(700);
+    const vpn = await isVPN();
+
+    if (vpn) {
+      setStep(2, 'error');
+      setStep(3, 'pending');
+      setShield('🚫', 'failed');
+      setBadge('BLOCKED', 'failed');
+      $('main-title').textContent    = 'VPN Detected';
+      $('main-subtitle').textContent = 'Please disable your VPN or proxy and try again.';
+      setProgress(100, 'red');
+      showResult('failed', '🛡️', 'VPN / Proxy Blocked', 'red',
+        'Your connection is routed through a VPN or proxy. Disable it and reopen the link.');
+      return;
+    }
+
+    setStep(2, 'done');
+    setProgress(66);
+    await sleep(500);
+
+    // ── Step 3: Server verify ──────────────────────────────────────────────
+    setStep(3, 'loading');
+    await sleep(800);
+
+    try {
+      const res  = await fetch('/api/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ botId, tgId, deviceId, username })
+      });
+      const data = await res.json();
+      setProgress(100);
+
+      // ✅ SUCCESS ────────────────────────────────────────────────────────
+      if (data.status === 'success') {
+        setStep(3, 'done');
+        setShield('✅', 'success');
+        setBadge('VERIFIED', 'verified');
+        $('main-title').textContent    = 'Verified!';
+        $('main-subtitle').textContent = 'Your device has been registered successfully.';
+        setProgress(100, 'green');
+        showResult('success', '✅', 'Verification Successful', 'green',
+          'Welcome ' + (data.username || username) + '! Your device is now linked to this bot.',
+          data.deviceId);
+      }
+
+      // ⚡ ALREADY VERIFIED (same tgId) ──────────────────────────────────
+      else if (data.status === 'already_tgid') {
+        setStep(3, 'done');
+        setShield('✅', 'success');
+        setBadge('VERIFIED', 'verified');
+        $('main-title').textContent    = 'Already Verified';
+        $('main-subtitle').textContent = 'This Telegram account is already verified.';
+        setProgress(100, 'green');
+        showResult('success', '⚡', 'Already Verified', 'green',
+          'Your Telegram account was verified earlier. You can proceed normally.',
+          data.deviceId);
+      }
+
+      // ❌ FAIL: Device already used by another tgId ──────────────────────
+      else if (data.status === 'already_device') {
+        setStep(3, 'error');
+        setShield('❌', 'failed');
+        setBadge('FAILED', 'failed');
+        $('main-title').textContent    = 'Device Blocked';
+        $('main-subtitle').textContent = 'This device is registered with another account.';
+        setProgress(100, 'red');
+        showResult('failed', '📵', 'Device Already Registered', 'red',
+          'This device is already linked to a different Telegram account on this bot. Each device can only be verified once.');
+      }
+
+      // ❌ FAIL: Any other server error ──────────────────────────────────
+      else {
+        setStep(3, 'error');
+        setShield('❌', 'failed');
+        setBadge('FAILED', 'failed');
+        $('main-title').textContent    = 'Verification Failed';
+        $('main-subtitle').textContent = 'Something went wrong. Please try again.';
+        setProgress(100, 'red');
+        showResult('failed', '❌', 'Verification Failed', 'red',
+          data.message || 'An unexpected error occurred. Please try again later.');
+      }
+
+    } catch (err) {
+      // ❌ FAIL: Network / connection error ──────────────────────────────
+      setStep(3, 'error');
+      setShield('❌', 'failed');
+      setBadge('ERROR', 'failed');
+      $('main-title').textContent    = 'Connection Error';
+      $('main-subtitle').textContent = 'Cannot reach the server. Check your internet.';
+      setProgress(100, 'red');
+      showResult('failed', '🔌', 'Connection Failed', 'red',
+        'Unable to connect to the verification server. Please check your internet and try again.');
+    }
+  }
+
+  setTimeout(verify, 400);
 </script>
 </body>
 </html>
