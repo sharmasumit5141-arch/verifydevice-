@@ -16,24 +16,42 @@ export default async function handler(req, res) {
   await client.connect();
 
   const db = client.db("verifyapp");
+
   const successCol = db.collection(`bot_${botid}`);
+  const failedCol = db.collection(`bot_${botid}_failed`);
 
   try {
 
-    // 🔍 Check user
+    // ✅ 1. Check success
     const user = await successCol.findOne({ tgId: tgid });
 
-    if (!user) {
+    if (user) {
       return res.json({
-        status: "pending",
-        message: "User not complete verification"
+        status: "success",
+        deviceId: user.deviceId,
+        verifiedAt: user.verifiedAt
       });
     }
 
+    // ❌ 2. Check failed attempts (latest)
+    const failed = await failedCol
+      .find({ tgId: tgid })
+      .sort({ attemptedAt: -1 })
+      .limit(1)
+      .toArray();
+
+    if (failed.length > 0) {
+      return res.json({
+        status: "fail",
+        reason: failed[0].reason,
+        attemptedAt: failed[0].attemptedAt
+      });
+    }
+
+    // ⏳ 3. Not verified yet
     return res.json({
-      status: "success",
-      deviceId: user.deviceId,
-      verifiedAt: user.verifiedAt
+      status: "pending",
+      message: "User not complete verification"
     });
 
   } catch (err) {
