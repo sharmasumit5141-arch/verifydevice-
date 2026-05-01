@@ -18,13 +18,13 @@ module.exports = async (req, res) => {
 
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  const { botid, tgid, deviceid } = req.query;
+  const { botid, tgid } = req.query;
 
   if (!botid || !tgid) {
     return res.status(400).json({
       status: "error",
       success: false,
-      message: "Missing required params: botid and tgid",
+      message: "Missing required params",
       code: 400
     });
   }
@@ -32,47 +32,26 @@ module.exports = async (req, res) => {
   try {
     const db = await getDB();
 
-    // 🔥 Per-bot collection (tumhara design)
     const successCol = db.collection(`bot_${botid}`);
     const failedCol  = db.collection(`bot_${botid}_failed`);
 
-    // ❌ 1. Same device used by different tgId
-    if (deviceid) {
-      const deviceRecord = await successCol.findOne({
-        deviceId: deviceid,
-        tgId: { $ne: tgid }
-      });
+    const tgId = tgid;
 
-      if (deviceRecord) {
-        return res.status(200).json({
-          status: "fail",
-          success: false,
-          message: "Device already used by another user",
-          deviceId: deviceid,
-          verifiedAt: deviceRecord.verifiedAt
-        });
-      }
-    }
+    // ✅ Check verified
+    const user = await successCol.findOne({ tgId: tgId });
 
-    // ✅ 2. Check verified user
-    const record = await successCol.findOne({ tgId: tgid });
-
-    if (record) {
+    if (user) {
       return res.status(200).json({
         status: "verified",
         success: true,
-        message: "User is verified",
-        tgId: record.tgId,
-        botId: botid,
-        deviceId: record.deviceId,
-        username: record.username || "Unknown",
-        verifiedAt: record.verifiedAt
+        deviceId: user.deviceId,
+        verifiedAt: user.verifiedAt
       });
     }
 
-    // ❌ 3. Check failed logs (latest attempt)
+    // ❌ Check failed logs
     const failed = await failedCol
-      .find({ tgId: tgid })
+      .find({ tgId: tgId })
       .sort({ attemptedAt: -1 })
       .limit(1)
       .toArray();
@@ -86,13 +65,11 @@ module.exports = async (req, res) => {
       });
     }
 
-    // ⏳ 4. Not verified
+    // ⏳ Not verified
     return res.status(200).json({
       status: "not_verified",
       success: false,
-      message: "User has not completed verification",
-      tgId: tgid,
-      botId: botid
+      message: "User not verified yet"
     });
 
   } catch (err) {
@@ -101,7 +78,7 @@ module.exports = async (req, res) => {
     return res.status(500).json({
       status: "error",
       success: false,
-      message: err.message, // 👈 debugging ke liye useful
+      message: err.message,
       code: 500
     });
   }
