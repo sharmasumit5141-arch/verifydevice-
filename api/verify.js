@@ -1,3 +1,16 @@
+/**
+ * /api/verify — POST
+ * Body: { botId, tgId, deviceId, username }
+ *
+ * Har bot ka alag collection: bot_<botId>
+ *
+ * RESPONSES:
+ *  status: "success"          → New device, new user — saved ✅
+ *  status: "already_verified" → Same device + same tgId — already done ✅
+ *  status: "already_device"   → Same device + ALAG tgId — DIRECT FAIL ❌
+ *  status: "error"            → Missing fields / server crash
+ */
+
 const { MongoClient } = require('mongodb');
 
 const MONGO_URI = process.env.MONGO_URI;
@@ -20,112 +33,76 @@ module.exports = async (req, res) => {
 
   if (req.method !== 'POST') {
     return res.status(405).json({
-      status: 'error',
+      status:  'error',
       success: false,
       message: 'Only POST method allowed',
-      code: 405
+      code:    405
     });
   }
 
   const { botId, tgId, deviceId, username } = req.body || {};
 
-  // ── Missing fields ─────────────────────────────────────────────────────────
   if (!botId || !tgId || !deviceId) {
     return res.status(400).json({
-      status: 'error',
+      status:  'error',
       success: false,
       message: 'Missing required fields: botId, tgId, deviceId',
-      code: 400
+      code:    400
     });
   }
 
   try {
     const db      = await getDB();
-    const col     = db.collection('verifications');
-    const failCol = db.collection('failed_verifications');
+    const col     = db.collection(`bot_${botId}`);        // is bot ka collection
+    const failCol = db.collection(`bot_${botId}_failed`); // failed log
 
-    // ── STEP 1: Pehle device ID check karo is bot mein ────────────────────
-    // Agar device mili aur tgId ALAG hai → FAIL
-    const deviceRecord = await col.findOne({ botId, deviceId });
+    // ── Sirf deviceId check karo is bot ke andar ─────────────────────
+    const existing = await col.findOne({ deviceId });
 
-    if (deviceRecord) {
-      if (deviceRecord.tgId !== tgId) {
-        // ❌ Same device, alag Telegram ID → BLOCK
-        await failCol.insertOne({
-          botId,
-          tgId,
-          deviceId,
-          username:    username || 'Unknown',
-          reason:      'already_device',
-          message:     'Device registered with different Telegram account',
-          attemptedAt: new Date()
-        });
+    if (existing) {
 
+      if (existing.tgId === tgId) {
+        // ✅ Same device + same tgId → Already verified
         return res.status(200).json({
-          status:  'already_device',
-          success: false,
-          message: 'Same device detected — this device is already registered with a different Telegram account on this bot',
-          deviceId,
+          status:     'already_verified',
+          success:    true,
+          message:    'Already verified in this bot',
+          tgId,
           botId,
-          verifiedAt: deviceRecord.verifiedAt
+          deviceId,
+          username:   existing.username || username || 'Unknown',
+          verifiedAt: existing.verifiedAt
         });
 
       } else {
-        // ✅ Same device, same tgId → already verified
+        // ❌ Same device + ALAG tgId → DIRECT FAIL
         await failCol.insertOne({
-          botId,
           tgId,
           deviceId,
           username:    username || 'Unknown',
-          reason:      'already_tgid',
-          message:     'Telegram account already verified on this bot',
+          reason:      'device_conflict',
+          message:     'Same device already linked with another account',
           attemptedAt: new Date()
         });
 
         return res.status(200).json({
-          status:     'already_tgid',
+          status:     'already_device',
           success:    false,
-          message:    'This Telegram account is already verified on this bot',
-          tgId,
+          message:    'Same device already linked with another account',
+          deviceId,
           botId,
-          deviceId:   deviceRecord.deviceId,
-          verifiedAt: deviceRecord.verifiedAt
+          verifiedAt: existing.verifiedAt
         });
       }
     }
 
-    // ── STEP 2: Device nahi mili — tgId check karo ────────────────────────
-    // Agar tgId kisi aur device se already verified hai → FAIL
-    const tgRecord = await col.findOne({ botId, tgId });
-
-    if (tgRecord) {
-      await failCol.insertOne({
-        botId,
-        tgId,
-        deviceId,
-        username:    username || 'Unknown',
-        reason:      'already_tgid_other_device',
-        message:     'Telegram account already verified with a different device',
-        attemptedAt: new Date()
-      });
-
-      return res.status(200).json({
-        status:     'already_tgid',
-        success:    false,
-        message:    'This Telegram account is already verified with a different device on this bot',
-        tgId,
-        botId,
-        verifiedAt: tgRecord.verifiedAt
-      });
-    }
-
-    // ── STEP 3: Naya device + Naya tgId → SUCCESS ─────────────────────────
+    // ── deviceId nahi mili → Save karo ──────────────────────────────
     const now = new Date();
     await col.insertOne({
-      botId,
-      tgId,
       deviceId,
+      tgId,
       username:   username || 'Unknown',
+      botId,
       verifiedAt: now,
       status:     'success'
     });
@@ -133,7 +110,7 @@ module.exports = async (req, res) => {
     return res.status(201).json({
       status:     'success',
       success:    true,
-      message:    'Device verified successfully',
+      message:    'Device verified and registered successfully',
       tgId,
       botId,
       deviceId,
