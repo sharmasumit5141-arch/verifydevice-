@@ -1,8 +1,15 @@
 {
-  "name": "verify-app",
+  "name": "device-verification",
   "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node api/server.js",
+    "start": "node api/server.js"
+  },
   "dependencies": {
     "mongodb": "^6.3.0"
+  },
+  "engines": {
+    "node": ">=18.x"
   }
 }
-
