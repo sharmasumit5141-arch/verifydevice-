@@ -40,65 +40,114 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const db = await getDB();
-    const col = db.collection('verifications');
+    const db      = await getDB();
+    const col     = db.collection('verifications');
+    const failCol = db.collection('failed_verifications');
 
-    // ── FAIL: Same tgId already verified in this bot ───────────────────────
-    const tgExists = await col.findOne({ botId, tgId });
-    if (tgExists) {
+    // ── STEP 1: Pehle device ID check karo is bot mein ────────────────────
+    // Agar device mili aur tgId ALAG hai → FAIL
+    const deviceRecord = await col.findOne({ botId, deviceId });
+
+    if (deviceRecord) {
+      if (deviceRecord.tgId !== tgId) {
+        // ❌ Same device, alag Telegram ID → BLOCK
+        await failCol.insertOne({
+          botId,
+          tgId,
+          deviceId,
+          username:    username || 'Unknown',
+          reason:      'already_device',
+          message:     'Device registered with different Telegram account',
+          attemptedAt: new Date()
+        });
+
+        return res.status(200).json({
+          status:  'already_device',
+          success: false,
+          message: 'Same device detected — this device is already registered with a different Telegram account on this bot',
+          deviceId,
+          botId,
+          verifiedAt: deviceRecord.verifiedAt
+        });
+
+      } else {
+        // ✅ Same device, same tgId → already verified
+        await failCol.insertOne({
+          botId,
+          tgId,
+          deviceId,
+          username:    username || 'Unknown',
+          reason:      'already_tgid',
+          message:     'Telegram account already verified on this bot',
+          attemptedAt: new Date()
+        });
+
+        return res.status(200).json({
+          status:     'already_tgid',
+          success:    false,
+          message:    'This Telegram account is already verified on this bot',
+          tgId,
+          botId,
+          deviceId:   deviceRecord.deviceId,
+          verifiedAt: deviceRecord.verifiedAt
+        });
+      }
+    }
+
+    // ── STEP 2: Device nahi mili — tgId check karo ────────────────────────
+    // Agar tgId kisi aur device se already verified hai → FAIL
+    const tgRecord = await col.findOne({ botId, tgId });
+
+    if (tgRecord) {
+      await failCol.insertOne({
+        botId,
+        tgId,
+        deviceId,
+        username:    username || 'Unknown',
+        reason:      'already_tgid_other_device',
+        message:     'Telegram account already verified with a different device',
+        attemptedAt: new Date()
+      });
+
       return res.status(200).json({
-        status: 'already_tgid',
-        success: false,
-        message: 'This Telegram account is already verified on this bot',
-        tgId: tgId,
-        botId: botId,
-        deviceId: tgExists.deviceId,
-        verifiedAt: tgExists.verifiedAt
+        status:     'already_tgid',
+        success:    false,
+        message:    'This Telegram account is already verified with a different device on this bot',
+        tgId,
+        botId,
+        verifiedAt: tgRecord.verifiedAt
       });
     }
 
-    // ── FAIL: Same deviceId already used by different tgId in this bot ─────
-    const deviceExists = await col.findOne({ botId, deviceId });
-    if (deviceExists) {
-      return res.status(200).json({
-        status: 'already_device',
-        success: false,
-        message: 'Same device detected — this device is already registered with another Telegram account on this bot',
-        deviceId: deviceId,
-        botId: botId,
-        verifiedAt: deviceExists.verifiedAt
-      });
-    }
-
-    // ── SUCCESS: New tgId + New device ─────────────────────────────────────
+    // ── STEP 3: Naya device + Naya tgId → SUCCESS ─────────────────────────
     const now = new Date();
     await col.insertOne({
       botId,
       tgId,
       deviceId,
-      username: username || 'Unknown',
+      username:   username || 'Unknown',
       verifiedAt: now,
-      status: 'success'
+      status:     'success'
     });
 
     return res.status(201).json({
-      status: 'success',
-      success: true,
-      message: 'Device verified successfully',
-      tgId: tgId,
-      botId: botId,
-      deviceId: deviceId,
-      username: username || 'Unknown',
+      status:     'success',
+      success:    true,
+      message:    'Device verified successfully',
+      tgId,
+      botId,
+      deviceId,
+      username:   username || 'Unknown',
       verifiedAt: now
     });
 
   } catch (err) {
     console.error('[VERIFY ERROR]', err.message);
     return res.status(500).json({
-      status: 'error',
+      status:  'error',
       success: false,
       message: 'Internal server error',
-      code: 500
+      code:    500
     });
   }
 };
