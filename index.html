@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Device Verification</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --green: #00ff88;
+      --green-glow: rgba(0,255,136,0.18);
+      --red: #ff3c5a;
+      --yellow: #ffd700;
+      --blue: #4499ff;
+      --bg: #050a06;
+      --surface: #0a120b;
+      --border: #0f2412;
+      --text: #c8f5d8;
+      --muted: #4a7a56;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Share Tech Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.13) 2px, rgba(0,0,0,0.13) 4px);
+      pointer-events: none; z-index: 999;
+    }
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,255,136,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,136,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none; z-index: 0;
+    }
+    .container { position: relative; z-index: 10; width: 90%; max-width: 520px; }
+    .topbar {
+      display: flex; justify-content: space-between;
+      align-items: center; margin-bottom: 6px;
+      font-size: 11px; color: var(--muted); letter-spacing: 2px;
+    }
+    .blink { color: var(--green); animation: blink 1.2s step-end infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: 2px solid var(--green);
+      padding: 36px 32px 32px;
+      position: relative;
+      box-shadow: 0 0 40px rgba(0,255,136,0.06), inset 0 0 60px rgba(0,0,0,0.4);
+    }
+    .card::before, .card::after {
+      content: ''; position: absolute;
+      width: 12px; height: 12px;
+      border-color: var(--green); border-style: solid;
+    }
+    .card::before { bottom: -1px; left: -1px; border-width: 0 0 2px 2px; }
+    .card::after  { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+    .scan-line {
+      position: absolute; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--green), transparent);
+      opacity: 0.35; animation: scandown 2.8s linear infinite; pointer-events: none;
+    }
+    @keyframes scandown { from { top: 0; } to { top: 100%; } }
+    .header-line { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+    .shield { width: 44px; height: 44px; flex-shrink: 0; }
+    .shield svg { width: 100%; height: 100%; filter: drop-shadow(0 0 10px var(--green)); }
+    .title-group h1 {
+      font-family: 'Rajdhani', sans-serif; font-size: 22px; font-weight: 700;
+      letter-spacing: 3px; text-transform: uppercase;
+      color: var(--green); text-shadow: 0 0 20px var(--green-glow);
+    }
+    .title-group p { font-size: 10px; letter-spacing: 2px; color: var(--muted); margin-top: 2px; }
+    .info-section { margin-bottom: 24px; }
+    .info-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 12px;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { color: var(--muted); letter-spacing: 1.5px; font-size: 10px; }
+    .info-value { color: var(--green); letter-spacing: 1px; font-weight: 600; }
+    .status-box {
+      border: 1px solid var(--border); padding: 22px; text-align: center;
+      position: relative; margin-top: 8px; min-height: 115px;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 10px; transition: border-color 0.4s, box-shadow 0.4s;
+    }
+    .status-icon { font-size: 30px; line-height: 1; }
+    .status-label {
+      font-family: 'Rajdhani', sans-serif; font-size: 22px; font-weight: 700;
+      letter-spacing: 4px; text-transform: uppercase; transition: color 0.4s;
+    }
+    .status-msg { font-size: 11px; letter-spacing: 1.2px; color: var(--muted); line-height: 1.6; }
+
+    /* ── State colors ── */
+    .state-same_device .status-box   { border-color: var(--green); box-shadow: 0 0 24px rgba(0,255,136,0.12); }
+    .state-same_device .status-label { color: var(--green); text-shadow: 0 0 12px var(--green-glow); }
+
+    .state-pending .status-box   { border-color: var(--blue); box-shadow: 0 0 24px rgba(68,153,255,0.1); }
+    .state-pending .status-label { color: var(--blue); }
+
+    .state-device_conflict .status-box,
+    .state-tgid_conflict .status-box,
+    .state-device_taken .status-box,
+    .state-error .status-box,
+    .state-fail .status-box   { border-color: var(--red); box-shadow: 0 0 24px rgba(255,60,90,0.1); }
+
+    .state-device_conflict .status-label,
+    .state-tgid_conflict .status-label,
+    .state-device_taken .status-label,
+    .state-error .status-label,
+    .state-fail .status-label { color: var(--red); }
+
+    .spinner {
+      width: 30px; height: 30px;
+      border: 2px solid var(--border); border-top-color: var(--green);
+      border-radius: 50%; animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .progress-bar { width: 100%; height: 2px; background: var(--border); margin-top: 12px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--green); width: 0%; transition: width 0.3s ease; box-shadow: 0 0 8px var(--green); }
+    .meta { margin-top: 20px; font-size: 10px; color: var(--muted); display: flex; justify-content: space-between; letter-spacing: 1px; }
+    .pulse-dot {
+      display: inline-block; width: 7px; height: 7px;
+      background: var(--green); border-radius: 50%;
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse 1.5s ease-in-out infinite; margin-right: 6px; vertical-align: middle;
+    }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.35;transform:scale(0.65);} }
+    .no-params { text-align: center; color: var(--red); font-size: 13px; letter-spacing: 2px; padding: 16px 0; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="topbar">
+    <span>SYS://DEVICE_AUTH_V2</span>
+    <span class="blink">■ ONLINE</span>
+  </div>
+
+  <div class="card" id="mainCard">
+    <div class="scan-line"></div>
+    <div class="header-line">
+      <div class="shield">
+        <svg viewBox="0 0 40 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 2L4 9v16c0 10 7.2 19.3 16 22 8.8-2.7 16-12 16-22V9L20 2z"
+            fill="rgba(0,255,136,0.08)" stroke="#00ff88" stroke-width="1.5"/>
+          <polyline points="12,24 18,30 28,18" stroke="#00ff88" stroke-width="2.2"
+            stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="title-group">
+        <h1>Device Verify</h1>
+        <p>SECURE AUTHENTICATION PORTAL</p>
+      </div>
+    </div>
+
+    <div class="info-section" id="infoSection"></div>
+
+    <div id="statusWrap">
+      <div class="status-box" id="statusBox">
+        <div class="spinner"></div>
+        <div class="status-label">CHECKING...</div>
+        <div class="status-msg">System se verify kar raha hai...</div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+
+    <div class="meta">
+      <span><span class="pulse-dot"></span>SECURE CONNECTION</span>
+      <span id="timestamp"></span>
+    </div>
+  </div>
+
+  <div class="topbar" style="margin-top:6px; justify-content:flex-end;">
+    <span>BOT_ID: <span id="botIdMeta" style="color:var(--green)">--</span></span>
+  </div>
+</div>
+
+<script>
+  const params   = new URLSearchParams(window.location.search);
+  const botid    = params.get('botid');
+  const tgid     = params.get('tgid');
+  const deviceid = params.get('deviceid');
+
+  document.getElementById('timestamp').textContent =
+    new Date().toLocaleTimeString('en-GB') + ' UTC';
+
+  const infoSection = document.getElementById('infoSection');
+
+  if (botid && tgid && deviceid) {
+    document.getElementById('botIdMeta').textContent = botid;
+    infoSection.innerHTML = `
+      <div class="info-row">
+        <span class="info-label">BOT ID</span>
+        <span class="info-value">${botid}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">TG ID</span>
+        <span class="info-value">${tgid}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">DEVICE ID</span>
+        <span class="info-value">${deviceid}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">INITIATED</span>
+        <span class="info-value">${new Date().toISOString().replace('T',' ').split('.')[0]} UTC</span>
+      </div>
+    `;
+  } else {
+    infoSection.innerHTML = '<div class="no-params">⚠ URL mein botid, tgid aur deviceid chahiye</div>';
+  }
+
+  // Result configs
+  const RESULTS = {
+    same_device:      { icon: '✔', label: 'VERIFIED',  msg: 'Device aur TG ID dono match — access granted' },
+    pending:          { icon: '⏳', label: 'PENDING',   msg: 'Naya device register hua — admin approval pending hai' },
+    device_conflict:  { icon: '✕', label: 'FAIL',      msg: 'Yeh device kisi aur TG ID ke saath register hai' },
+    tgid_conflict:    { icon: '✕', label: 'FAIL',      msg: 'Yeh TG ID kisi aur device pe already register hai' },
+    device_taken:     { icon: '✕', label: 'FAIL',      msg: 'Yeh device pehle se kisi aur se linked hai' },
+    error:            { icon: '✕', label: 'ERROR',     msg: 'Server error — baad mein try karo' },
+  };
+
+  function setStatus(result, customMsg) {
+    const wrap = document.getElementById('statusWrap');
+    const cfg  = RESULTS[result] || RESULTS['error'];
+    wrap.className = 'state-' + result;
+    document.getElementById('statusBox').innerHTML = `
+      <div class="status-icon">${cfg.icon}</div>
+      <div class="status-label">${cfg.label}</div>
+      <div class="status-msg">${customMsg || cfg.msg}</div>
+    `;
+    document.getElementById('progressFill').style.width = '100%';
+  }
+
+  async function checkDevice() {
+    if (!botid || !tgid || !deviceid) {
+      setStatus('error', 'URL mein botid, tgid aur deviceid teeno chahiye');
+      document.getElementById('progressFill').style.width = '100%';
+      return;
+    }
+
+    let prog = 0;
+    const progEl = document.getElementById('progressFill');
+    const timer  = setInterval(() => {
+      prog = Math.min(prog + 7, 85);
+      progEl.style.width = prog + '%';
+    }, 100);
+
+    try {
+      const res  = await fetch(`/api/check?botid=${encodeURIComponent(botid)}&tgid=${encodeURIComponent(tgid)}&deviceid=${encodeURIComponent(deviceid)}`);
+      const data = await res.json();
+      clearInterval(timer);
+      setStatus(data.result || 'error', data.message);
+    } catch (e) {
+      clearInterval(timer);
+      setStatus('error', 'Network error — connection failed');
+    }
+  }
+
+  setTimeout(checkDevice, 700);
+</script>
+</body>
+  </html>
+  
