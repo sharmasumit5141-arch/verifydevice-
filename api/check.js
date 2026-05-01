@@ -1,114 +1,87 @@
 // api/check.js
-const { MongoClient } = require("mongodb");
+const { getDb } = require('../lib/mongo');
 
-const uri = process.env.MONGO_URI;
+module.exports = async (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Access-Control-Allow-Origin', '*');
 
-function getClient() {
-  if (!global._mongoClient) {
-    const client = new MongoClient(uri);
-    global._mongoClient = client.connect().then(() => client);
-  }
-  return global._mongoClient;
-}
+  // Support both GET query params and POST body
+  const botid = req.query.botid || req.body?.botid;
+  const tgid  = req.query.tgid  || req.body?.tgid;
+  const deviceId = req.query.deviceid || req.body?.deviceid;
 
-async function getCollections(botId) {
-  const client = await getClient();
-  const db = client.db("device_verify");
-  const safe = String(botId).replace(/[^a-zA-Z0-9_]/g, "_");
-  return {
-    devices: db.collection(`bot_${safe}_devices`),
-    tgids:   db.collection(`bot_${safe}_tgids`),
-  };
-}
-
-module.exports = async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Content-Type", "application/json");
-
-  const { botid, tgid, deviceid } = req.query;
-
-  if (!botid || !tgid || !deviceid) {
+  if (!botid || !tgid) {
     return res.status(400).json({
-      status: "error",
-      result: "error",
-      message: "botid, tgid aur deviceid teeno chahiye",
+      status: 'error',
+      code: 400,
+      message: 'botid and tgid are required'
     });
   }
 
   try {
-    const { devices, tgids } = await getCollections(botid);
+    const db = await getDb();
+    // Each bot gets its own collection: bot_987654321
+    const col = db.collection(`bot_${botid}`);
 
-    const existingDevice = await devices.findOne({ deviceid: String(deviceid) });
-    const existingTgid   = await tgids.findOne({ tgid: String(tgid) });
+    // Find record by tgid
+    const record = await col.findOne({ tgid: String(tgid) });
 
-    // ── CASE 1: Dono exist karte hain ──
-    if (existingDevice && existingTgid) {
-      if (existingDevice.tgid === String(tgid)) {
-        // Same device + same tgid → SUCCESS
+    // ─── PENDING: tgid never visited verification page ───────────────────
+    if (!record) {
+      return res.status(200).json({
+        status: 'pending',
+        code: 202,
+        message: 'User has not started verification yet',
+        tgid,
+        botid
+      });
+    }
+
+    // ─── SUCCESS case 1: Same tgid, different botid (bot changed) ────────
+    // ─── SUCCESS case 2: New tgid + new botid combo ───────────────────────
+    // ─── FAIL: Same botid + same deviceId but different tgid ─────────────
+
+    const deviceMatches  = record.deviceId === deviceId;
+    const botMatches     = record.botid    === String(botid);
+
+    // Check if another tgid already owns this deviceId+botid combo
+    if (deviceId) {
+      const sameDevice = await col.findOne({
+        deviceId: deviceId,
+        botid: String(botid),
+        tgid: { $ne: String(tgid) }
+      });
+
+      if (sameDevice) {
         return res.status(200).json({
-          status: "success",
-          result: "same_device",
-          message: "Device aur TG ID match — verified!",
-        });
-      } else {
-        // Device exist hai lekin alag tgid ke saath
-        return res.status(200).json({
-          status: "fail",
-          result: "device_conflict",
-          message: "Yeh device kisi aur TG ID ke saath register hai",
+          status: 'fail',
+          code: 403,
+          message: 'Device already registered to a different Telegram account',
+          tgid,
+          botid,
+          registered_tgid: sameDevice.tgid
         });
       }
     }
 
-    // ── CASE 2: Device nahi, tgid exist karta hai ──
-    if (!existingDevice && existingTgid) {
-      return res.status(200).json({
-        status: "fail",
-        result: "tgid_conflict",
-        message: "Yeh TG ID kisi aur device pe already register hai",
-      });
-    }
-
-    // ── CASE 3: Device exist karta hai, tgid nahi ──
-    if (existingDevice && !existingTgid) {
-      return res.status(200).json({
-        status: "fail",
-        result: "device_taken",
-        message: "Yeh device kisi aur TG ID se linked hai",
-      });
-    }
-
-    // ── CASE 4: Dono naye hain → Register + Directly Verify ──
-    const now = new Date().toISOString();
-
-    await devices.insertOne({
-      deviceid:   String(deviceid),
-      tgid:       String(tgid),
-      botid:      String(botid),
-      status:     "verified",
-      created_at: now,
-    });
-
-    await tgids.insertOne({
-      tgid:       String(tgid),
-      deviceid:   String(deviceid),
-      botid:      String(botid),
-      status:     "verified",
-      created_at: now,
-    });
-
+    // All good — success
     return res.status(200).json({
-      status: "success",
-      result: "same_device",
-      message: "Device register aur verify ho gaya!",
+      status: 'success',
+      code: 200,
+      message: 'Device verification successful',
+      tgid,
+      botid,
+      deviceId: record.deviceId,
+      verified_at: record.createdAt
     });
 
   } catch (err) {
-    console.error("DB Error:", err);
+    console.error(err);
     return res.status(500).json({
-      status: "error",
-      result: "error",
-      message: "Server error — baad mein try karo",
+      status: 'error',
+      code: 500,
+      message: 'Internal server error',
+      detail: err.message
     });
   }
 };
