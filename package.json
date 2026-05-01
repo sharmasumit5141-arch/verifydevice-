@@ -1,15 +1,13 @@
 {
   "name": "device-verification",
   "version": "1.0.0",
-  "private": true,
+  "description": "Telegram Bot Device Verification System",
+  "main": "index.js",
   "scripts": {
-    "dev": "node api/server.js",
-    "start": "node api/server.js"
+    "dev": "vercel dev",
+    "build": "echo 'No build needed'"
   },
   "dependencies": {
     "mongodb": "^6.3.0"
-  },
-  "engines": {
-    "node": ">=18.x"
   }
 }
