@@ -1,85 +1,112 @@
+// api/check.js
 const { MongoClient } = require("mongodb");
 
-const MONGO_URI = process.env.MONGO_URI;
-let client;
+const uri = process.env.MONGO_URI;
 
-async function getDB() {
-  if (!client) {
-    client = new MongoClient(MONGO_URI);
-    await client.connect();
+function getClient() {
+  if (!global._mongoClient) {
+    const client = new MongoClient(uri);
+    global._mongoClient = client.connect().then(() => client);
   }
-  return client.db("verifyapp");
+  return global._mongoClient;
 }
 
-module.exports = async (req, res) => {
+async function getCollections(botId) {
+  const client = await getClient();
+  const db = client.db("device_verify");
+  const safe = String(botId).replace(/[^a-zA-Z0-9_]/g, "_");
+  return {
+    devices: db.collection(`bot_${safe}_devices`), // deviceId track
+    tgids:   db.collection(`bot_${safe}_tgids`),   // tgid track
+  };
+}
+
+module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Content-Type", "application/json");
 
-  if (req.method === "OPTIONS") return res.status(200).end();
+  const { botid, tgid, deviceid } = req.query;
 
-  const { botid, tgid } = req.query;
-
-  if (!botid || !tgid) {
+  if (!botid || !tgid || !deviceid) {
     return res.status(400).json({
       status: "error",
-      success: false,
-      message: "Missing required params",
-      code: 400
+      message: "botid, tgid aur deviceid teeno chahiye",
     });
   }
 
   try {
-    const db = await getDB();
+    const { devices, tgids } = await getCollections(botid);
 
-    const successCol = db.collection(`bot_${botid}`);
-    const failedCol  = db.collection(`bot_${botid}_failed`);
+    const existingDevice = await devices.findOne({ deviceid: String(deviceid) });
+    const existingTgid   = await tgids.findOne({ tgid: String(tgid) });
 
-    const tgId = tgid;
-
-    // ✅ Check verified
-    const user = await successCol.findOne({ tgId: tgId });
-
-    if (user) {
-      return res.status(200).json({
-        status: "verified",
-        success: true,
-        deviceId: user.deviceId,
-        verifiedAt: user.verifiedAt
-      });
+    // ── CASE 1: Dono exist karte hain ──
+    if (existingDevice && existingTgid) {
+      if (existingDevice.tgid === String(tgid)) {
+        // Same device + same tgid → SUCCESS
+        return res.status(200).json({
+          status: "success",
+          result: "same_device",
+          message: "Device aur TG ID match — verified!",
+        });
+      } else {
+        // Device exist karta hai lekin alag tgid ke saath → FAIL
+        return res.status(200).json({
+          status: "fail",
+          result: "device_conflict",
+          message: "Yeh device kisi aur TG ID ke saath register hai",
+        });
+      }
     }
 
-    // ❌ Check failed logs
-    const failed = await failedCol
-      .find({ tgId: tgId })
-      .sort({ attemptedAt: -1 })
-      .limit(1)
-      .toArray();
-
-    if (failed.length > 0) {
+    // ── CASE 2: Device nahi, tgid exist karta hai → FAIL ──
+    if (!existingDevice && existingTgid) {
       return res.status(200).json({
         status: "fail",
-        success: false,
-        message: failed[0].reason,
-        attemptedAt: failed[0].attemptedAt
+        result: "tgid_conflict",
+        message: "Yeh TG ID kisi aur device pe already register hai",
       });
     }
 
-    // ⏳ Not verified
+    // ── CASE 3: Device exist karta hai, tgid nahi → FAIL ──
+    if (existingDevice && !existingTgid) {
+      return res.status(200).json({
+        status: "fail",
+        result: "device_taken",
+        message: "Yeh device kisi aur TG ID se linked hai",
+      });
+    }
+
+    // ── CASE 4: Dono naye hain → PENDING ──
+    const now = new Date().toISOString();
+
+    await devices.insertOne({
+      deviceid: String(deviceid),
+      tgid:     String(tgid),
+      botid:    String(botid),
+      status:   "pending",
+      created_at: now,
+    });
+
+    await tgids.insertOne({
+      tgid:     String(tgid),
+      deviceid: String(deviceid),
+      botid:    String(botid),
+      status:   "pending",
+      created_at: now,
+    });
+
     return res.status(200).json({
-      status: "not_verified",
-      success: false,
-      message: "User not verified yet"
+      status: "success",
+      result: "pending",
+      message: "Naya device register hua — verification pending",
     });
 
   } catch (err) {
-    console.error("[CHECK ERROR]", err.message);
-
+    console.error("DB Error:", err);
     return res.status(500).json({
       status: "error",
-      success: false,
-      message: err.message,
-      code: 500
+      message: "Server error — baad mein try karo",
     });
   }
 };
