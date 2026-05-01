@@ -1,130 +1,86 @@
-/**
- * /api/verify — POST
- * Body: { botId, tgId, deviceId, username }
- *
- * Har bot ka alag collection: bot_<botId>
- *
- * RESPONSES:
- *  status: "success"          → New device, new user — saved ✅
- *  status: "already_verified" → Same device + same tgId — already done ✅
- *  status: "already_device"   → Same device + ALAG tgId — DIRECT FAIL ❌
- *  status: "error"            → Missing fields / server crash
- */
+import { MongoClient } from "mongodb";
 
-const { MongoClient } = require('mongodb');
+const uri = process.env.MONGODB_URI;
 
-const MONGO_URI = process.env.MONGO_URI;
-let client;
-
-async function getDB() {
-  if (!client) {
-    client = new MongoClient(MONGO_URI);
-    await client.connect();
-  }
-  return client.db('verifyapp');
+// 🔹 deviceId generate (tgId based - fixed)
+function generateDeviceId(tgid) {
+  return "DEV-" + Buffer.from(tgid).toString("hex").slice(0, 8).toUpperCase();
 }
 
-module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+export default async function handler(req, res) {
+  const { botid, tgid, username } = req.query;
 
-  if (req.method === 'OPTIONS') return res.status(200).end();
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({
-      status:  'error',
-      success: false,
-      message: 'Only POST method allowed',
-      code:    405
-    });
+  if (!botid || !tgid) {
+    return res.json({ status: "error", message: "Missing params" });
   }
 
-  const { botId, tgId, deviceId, username } = req.body || {};
+  const client = new MongoClient(uri);
+  await client.connect();
 
-  if (!botId || !tgId || !deviceId) {
-    return res.status(400).json({
-      status:  'error',
-      success: false,
-      message: 'Missing required fields: botId, tgId, deviceId',
-      code:    400
-    });
-  }
+  const db = client.db("verifyapp");
+
+  const successCol = db.collection(`bot_${botid}`);
+  const failedCol = db.collection(`bot_${botid}_failed`);
+
+  const deviceId = generateDeviceId(tgid);
 
   try {
-    const db      = await getDB();
-    const col     = db.collection(`bot_${botId}`);        // is bot ka collection
-    const failCol = db.collection(`bot_${botId}_failed`); // failed log
 
-    // ── Sirf deviceId check karo is bot ke andar ─────────────────────
-    const existing = await col.findOne({ deviceId });
+    // ✅ 1. Already verified check
+    const existing = await successCol.findOne({ tgId: tgid });
 
     if (existing) {
-
-      if (existing.tgId === tgId) {
-        // ✅ Same device + same tgId → Already verified
-        return res.status(200).json({
-          status:     'already_verified',
-          success:    true,
-          message:    'Already verified in this bot',
-          tgId,
-          botId,
-          deviceId,
-          username:   existing.username || username || 'Unknown',
-          verifiedAt: existing.verifiedAt
-        });
-
-      } else {
-        // ❌ Same device + ALAG tgId → DIRECT FAIL
-        await failCol.insertOne({
-          tgId,
-          deviceId,
-          username:    username || 'Unknown',
-          reason:      'device_conflict',
-          message:     'Same device already linked with another account',
-          attemptedAt: new Date()
-        });
-
-        return res.status(200).json({
-          status:     'already_device',
-          success:    false,
-          message:    'Same device already linked with another account',
-          deviceId,
-          botId,
-          verifiedAt: existing.verifiedAt
-        });
-      }
+      return res.json({
+        status: "success",
+        message: "Already Verified",
+        deviceId: existing.deviceId
+      });
     }
 
-    // ── deviceId nahi mili → Save karo ──────────────────────────────
-    const now = new Date();
-    await col.insertOne({
+    // ❌ 2. Conflict check (same device used by another tgId)
+    const conflict = await successCol.findOne({
       deviceId,
-      tgId,
-      username:   username || 'Unknown',
-      botId,
-      verifiedAt: now,
-      status:     'success'
+      tgId: { $ne: tgid }
     });
 
-    return res.status(201).json({
-      status:     'success',
-      success:    true,
-      message:    'Device verified and registered successfully',
-      tgId,
-      botId,
+    if (conflict) {
+
+      // save fail log
+      await failedCol.insertOne({
+        deviceId,
+        tgId,
+        reason: "Device already used",
+        attemptedAt: new Date()
+      });
+
+      return res.json({
+        status: "fail",
+        message: "Device already used by another user"
+      });
+    }
+
+    // ✅ 3. Save success
+    await successCol.insertOne({
       deviceId,
-      username:   username || 'Unknown',
-      verifiedAt: now
+      tgId,
+      username: username || null,
+      verifiedAt: new Date()
+    });
+
+    return res.json({
+      status: "success",
+      message: "Verified Successfully",
+      deviceId
     });
 
   } catch (err) {
-    console.error('[VERIFY ERROR]', err.message);
-    return res.status(500).json({
-      status:  'error',
-      success: false,
-      message: 'Internal server error',
-      code:    500
+
+    return res.json({
+      status: "error",
+      message: "Server error"
     });
+
+  } finally {
+    await client.close();
   }
-};
+}
