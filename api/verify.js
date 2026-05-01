@@ -17,62 +17,88 @@ module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { botId, tgId, deviceId, username } = req.body;
+  if (req.method !== 'POST') {
+    return res.status(405).json({
+      status: 'error',
+      success: false,
+      message: 'Only POST method allowed',
+      code: 405
+    });
+  }
 
+  const { botId, tgId, deviceId, username } = req.body || {};
+
+  // ── Missing fields ─────────────────────────────────────────────────────────
   if (!botId || !tgId || !deviceId) {
-    return res.status(400).json({ status: 'error', message: 'Missing required fields' });
+    return res.status(400).json({
+      status: 'error',
+      success: false,
+      message: 'Missing required fields: botId, tgId, deviceId',
+      code: 400
+    });
   }
 
   try {
     const db = await getDB();
     const col = db.collection('verifications');
 
-    // botId + deviceId se check karo
-    const existing = await col.findOne({ botId, deviceId });
-
-    if (existing) {
-      if (existing.tgId === tgId) {
-        // Same device, same tgId — already verified
-        return res.json({
-          status: 'already_verified',
-          message: 'Already verified'
-        });
-      } else {
-        // Same device, different tgId — FAIL
-        await col.insertOne({
-          botId,
-          tgId,
-          deviceId,
-          username: username || 'Unknown',
-          verifiedAt: new Date(),
-          status: 'already_device'
-        });
-        return res.json({
-          status: 'already_device',
-          message: 'Verification failed already link with another account'
-        });
-      }
+    // ── FAIL: Same tgId already verified in this bot ───────────────────────
+    const tgExists = await col.findOne({ botId, tgId });
+    if (tgExists) {
+      return res.status(200).json({
+        status: 'already_tgid',
+        success: false,
+        message: 'This Telegram account is already verified on this bot',
+        tgId: tgId,
+        botId: botId,
+        deviceId: tgExists.deviceId,
+        verifiedAt: tgExists.verifiedAt
+      });
     }
 
-    // Naya device is botId ke liye — success
+    // ── FAIL: Same deviceId already used by different tgId in this bot ─────
+    const deviceExists = await col.findOne({ botId, deviceId });
+    if (deviceExists) {
+      return res.status(200).json({
+        status: 'already_device',
+        success: false,
+        message: 'Same device detected — this device is already registered with another Telegram account on this bot',
+        deviceId: deviceId,
+        botId: botId,
+        verifiedAt: deviceExists.verifiedAt
+      });
+    }
+
+    // ── SUCCESS: New tgId + New device ─────────────────────────────────────
+    const now = new Date();
     await col.insertOne({
       botId,
       tgId,
       deviceId,
       username: username || 'Unknown',
-      verifiedAt: new Date(),
+      verifiedAt: now,
       status: 'success'
     });
 
-    return res.json({
+    return res.status(201).json({
       status: 'success',
-      message: 'Verified successfully'
+      success: true,
+      message: 'Device verified successfully',
+      tgId: tgId,
+      botId: botId,
+      deviceId: deviceId,
+      username: username || 'Unknown',
+      verifiedAt: now
     });
 
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ status: 'error', message: 'Server error' });
+    console.error('[VERIFY ERROR]', err.message);
+    return res.status(500).json({
+      status: 'error',
+      success: false,
+      message: 'Internal server error',
+      code: 500
+    });
   }
 };
