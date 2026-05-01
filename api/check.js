@@ -1,3 +1,14 @@
+/**
+ * /api/check — GET
+ * Query: ?botid=xxx&tgid=xxx[&deviceid=xxx]
+ *
+ * RESPONSES:
+ *  status: "verified"       → tgId verified in this bot ✅
+ *  status: "not_verified"   → tgId not found in this bot
+ *  status: "already_device" → deviceId belongs to different tgId (if deviceid passed)
+ *  status: "error"          → missing params / server crash
+ */
+
 const { MongoClient } = require('mongodb');
 
 const MONGO_URI = process.env.MONGO_URI;
@@ -20,69 +31,66 @@ module.exports = async (req, res) => {
 
   const { botid, tgid, deviceid } = req.query;
 
-  // ── Missing params ─────────────────────────────────────────────────────────
   if (!botid || !tgid) {
     return res.status(400).json({
-      status: 'error',
+      status:  'error',
       success: false,
-      message: 'Missing required params: botid and tgid',
-      example: '/api/check?botid=BOT123&tgid=TG456',
-      code: 400
+      message: 'Missing required: botid and tgid',
+      example: '/api/check?botid=BOT123&tgid=987654321',
+      code:    400
     });
   }
 
   try {
-    const db = await getDB();
-    const col = db.collection('verifications');
+    const db  = await getDB();
+    const col = db.collection(`bot_${botid}`);
 
-    // ── FAIL: Same device kisi aur tgId se linked hai is bot mein ─────────
+    // Optional device check
     if (deviceid) {
-      const deviceRecord = await col.findOne({ botId: botid, deviceId: deviceid });
-      if (deviceRecord && deviceRecord.tgId !== tgid) {
+      const dr = await col.findOne({ deviceId: deviceid });
+      if (dr && dr.tgId !== tgid) {
         return res.status(200).json({
-          status: 'already_device',
-          success: false,
-          message: 'Same device detected — already registered with another Telegram account',
-          deviceId: deviceid,
-          botId: botid,
-          verifiedAt: deviceRecord.verifiedAt
+          status:     'already_device',
+          success:    false,
+          message:    'Same device already linked with another account',
+          deviceId:   deviceid,
+          botId:      botid,
+          verifiedAt: dr.verifiedAt
         });
       }
     }
 
-    const record = await col.findOne({ botId: botid, tgId: tgid });
+    const record = await col.findOne({ tgId: tgid });
 
-    // ── SUCCESS: Verified record mila ──────────────────────────────────────
     if (record) {
       return res.status(200).json({
-        status: 'verified',
-        success: true,
-        message: 'User is verified',
-        tgId: record.tgId,
-        botId: record.botId,
-        deviceId: record.deviceId,
-        username: record.username || 'Unknown',
+        status:     'verified',
+        success:    true,
+        message:    'User is verified in this bot',
+        tgId:       record.tgId,
+        botId:      botid,
+        deviceId:   record.deviceId,
+        username:   record.username || 'Unknown',
         verifiedAt: record.verifiedAt
       });
     }
 
-    // ── FAIL: Record nahi mila = kabhi verify nahi kiya ───────────────────
     return res.status(200).json({
-      status: 'not_verified',
-      success: false,
-      message: 'User has not completed verification',
-      tgId: tgid,
-      botId: botid,
+      status:     'not_verified',
+      success:    false,
+      message:    'User has not completed verification in this bot',
+      tgId:       tgid,
+      botId:      botid,
       verifiedAt: null
     });
 
   } catch (err) {
     console.error('[CHECK ERROR]', err.message);
     return res.status(500).json({
-      status: 'error',
+      status:  'error',
       success: false,
       message: 'Internal server error',
-      code: 500
+      code:    500
     });
   }
 };
