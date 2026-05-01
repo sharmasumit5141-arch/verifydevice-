@@ -1,86 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Verifying...</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UNIO Secure Verify</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-    :root{--blue:#2563eb;--blue-light:#eff6ff;--blue-mid:#bfdbfe;--white:#fff;--gray:#6b7280;--text:#111827}
-    body{min-height:100vh;background:var(--white);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'DM Sans',sans-serif;color:var(--text);overflow:hidden}
-    body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,#dbeafe 0%,transparent 70%);pointer-events:none}
-    .wrap{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:40px;padding:32px;text-align:center}
-    .ring-wrap{position:relative;width:110px;height:110px;display:flex;align-items:center;justify-content:center}
-    .ring{position:absolute;inset:0;border-radius:50%;border:3px solid transparent}
-    .ring-outer{border-top-color:var(--blue);border-right-color:var(--blue-mid);animation:spin 1.1s linear infinite}
-    .ring-inner{inset:14px;border-top-color:transparent;border-bottom-color:var(--blue);border-left-color:var(--blue-mid);animation:spin .75s linear infinite reverse}
+    :root{--blue:#2563eb;--red:#dc2626;--gray:#6b7280}
+    body{background:#fff;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center}
+    .wrap{padding:20px;max-width:300px}
+    .loader{width:60px;height:60px;border:4px solid #f3f3f3;border-top:4px solid var(--blue);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 20px}
     @keyframes spin{to{transform:rotate(360deg)}}
-    .result-icon{display:none;width:110px;height:110px;border-radius:50%;align-items:center;justify-content:center;font-size:44px;animation:popIn .4s cubic-bezier(.34,1.56,.64,1) both}
-    @keyframes popIn{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
-    .result-icon.success{background:#eff6ff;color:#2563eb}
-    .result-icon.fail{background:#fef2f2;color:#dc2626}
-    .status-msg{font-size:15px;color:var(--gray);min-height:22px}
-    .status-msg.success{color:#1d4ed8;font-weight:500}
-    .status-msg.fail{color:#dc2626;font-weight:500}
-    .progress-bar{width:200px;height:2px;background:var(--blue-mid);border-radius:99px;overflow:hidden}
-    .progress-fill{height:100%;width:0%;background:var(--blue);transition:width 0.3s ease}
-    .footer{position:fixed;bottom:28px;font-size:12px;color:var(--gray)}.footer-logo{font-weight:500;color:var(--blue)}
+    .icon{font-size:50px;display:none;margin-bottom:20px}
+    .status{font-size:16px;color:var(--gray)}
+    .success-icon{color:var(--blue)}.fail-icon{color:var(--red)}
   </style>
 </head>
 <body>
 <div class="wrap">
-  <div id="ringWrap" class="ring-wrap"><div class="ring ring-outer"></div><div class="ring ring-inner"></div></div>
-  <div id="resultIcon" class="result-icon"></div>
-  <div class="status-msg" id="statusMsg">Securing device link...</div>
-  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div id="loader" class="loader"></div>
+  <div id="icon" class="icon"></div>
+  <div id="msg" class="status">Checking hardware security...</div>
 </div>
-<div class="footer">Powered by <span class="footer-logo">Unio Wallet</span> ✅</div>
 
 <script>
-  async function getHardwareID() {
+  async function getHID() {
     const canvas = document.createElement('canvas');
     const gl = canvas.getContext('webgl');
-    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-    const renderer = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : "unknown";
-    const traits = [renderer, screen.width + "x" + screen.height, navigator.hardwareConcurrency, "V1_SALT"].join('|');
+    const debug = gl.getExtension('WEBGL_debug_renderer_info');
+    const renderer = debug ? gl.getParameter(debug.UNMASKED_RENDERER_WEBGL) : "unknown";
+    const traits = [renderer, screen.width+"x"+screen.height, navigator.hardwareConcurrency].join('|');
     const encode = new TextEncoder().encode(traits);
     const hash = await crypto.subtle.digest('SHA-256', encode);
     return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
-  async function start() {
+  async function init() {
     const params = new URLSearchParams(window.location.search);
-    const botid = params.get('botid'), tgid = params.get('tgid');
-    const prog = document.getElementById('progressFill');
+    const bid = params.get('botid');
+    const tid = params.get('tgid');
+    const buser = params.get('botuser'); // URL se bot username uthaya
 
-    if(!botid || !tgid) {
-        updateUI('fail', 'Access Denied: Missing ID');
-        return;
+    const msgEl = document.getElementById('msg'), loadEl = document.getElementById('loader'), iconEl = document.getElementById('icon');
+
+    if(!bid || !tid || !buser) { 
+      msgEl.textContent = "Error: Invalid Parameters"; 
+      return; 
     }
 
-    const deviceid = await getHardwareID();
-    prog.style.width = "70%";
-
+    const hid = await getHID();
     try {
-      const res = await fetch(`/api/check?botid=${botid}&tgid=${tgid}&deviceid=${deviceid}`);
+      // Backend ko as usual data bheja
+      const res = await fetch(`/api/check?botid=${bid}&tgid=${tid}&deviceid=${hid}`);
       const data = await res.json();
-      updateUI(data.status, data.message);
-    } catch (e) {
-      updateUI('fail', 'Connection Error');
-    }
-  }
 
-  function updateUI(type, msg) {
-    document.getElementById('ringWrap').style.display = 'none';
-    const icon = document.getElementById('resultIcon');
-    icon.style.display = 'flex';
-    icon.className = 'result-icon ' + (type === 'success' ? 'success' : 'fail');
-    icon.textContent = type === 'success' ? '✓' : '✕';
-    document.getElementById('statusMsg').textContent = msg;
-    document.getElementById('statusMsg').className = 'status-msg ' + (type === 'success' ? 'success' : 'fail');
-    document.getElementById('progressFill').style.width = '100%';
+      loadEl.style.display = 'none';
+      iconEl.style.display = 'block';
+
+      if(data.status === "success") {
+        iconEl.textContent = "✓"; iconEl.className = "icon success-icon";
+        msgEl.textContent = "Verification Successful!";
+      } else {
+        iconEl.textContent = "✕"; iconEl.className = "icon fail-icon";
+        msgEl.textContent = data.message;
+        
+        // FAIL REDIRECT: URL se aaye botuser ka use kiya
+        setTimeout(() => {
+          window.location.href = `https://t.me/${buser}?start=verifyidfailed`;
+        }, 2500);
+      }
+    } catch (e) { msgEl.textContent = "Server Error"; }
   }
-  setTimeout(start, 1000);
+  setTimeout(init, 1000);
 </script>
 </body>
 </html>
