@@ -16,29 +16,17 @@ body {
   align-items: center;
   height: 100vh;
 }
-
 .card {
   background: #1e293b;
   padding: 30px;
   border-radius: 15px;
   text-align: center;
   width: 320px;
-  box-shadow: 0 0 20px rgba(0,0,0,0.5);
 }
-
-h1 {
-  margin-bottom: 10px;
-}
-
-.status {
-  margin-top: 20px;
-  font-size: 18px;
-}
-
+.status { margin-top: 20px; }
 .success { color: #22c55e; }
 .fail { color: #ef4444; }
 .loading { color: #38bdf8; }
-
 .loader {
   border: 4px solid #334155;
   border-top: 4px solid #38bdf8;
@@ -48,60 +36,81 @@ h1 {
   margin: 20px auto;
   animation: spin 1s linear infinite;
 }
-
-@keyframes spin {
-  100% { transform: rotate(360deg); }
-}
+@keyframes spin { 100% { transform: rotate(360deg); } }
 </style>
 </head>
 
 <body>
 
 <div class="card">
-  <h1>🔐 Verifying</h1>
-  <div class="loader"></div>
-  <div class="status loading" id="status">Checking your device...</div>
+  <h2>🔐 Device Verification</h2>
+  <div class="loader" id="loader"></div>
+  <div class="status loading" id="status">Checking...</div>
 </div>
 
 <script>
 function getParam(name) {
-  const url = new URL(window.location.href);
-  return url.searchParams.get(name);
+  return new URL(window.location.href).searchParams.get(name);
 }
 
 const botid = getParam("botid");
 const tgid = getParam("tgid");
+const username = getParam("username") || "user";
 
 const statusEl = document.getElementById("status");
+const loader = document.getElementById("loader");
 
 if (!botid || !tgid) {
-  statusEl.innerHTML = "❌ Invalid Link";
+  loader.style.display = "none";
+  statusEl.innerHTML = "❌ Invalid URL (botid/tgid missing)";
   statusEl.className = "status fail";
 } else {
 
-  fetch(`/api/verify?botid=${botid}&tgid=${tgid}`)
-    .then(res => res.json())
-    .then(data => {
+  fetch(`/api/verify?botid=${botid}&tgid=${tgid}&username=${username}`)
+    .then(async res => {
+      const text = await res.text();
 
-      document.querySelector(".loader").style.display = "none";
-
-      if (data.status === "success") {
-        statusEl.innerHTML = `✅ ${data.message}<br><br><small>${data.deviceId}</small>`;
-        statusEl.className = "status success";
-      } 
-      else if (data.status === "fail") {
-        statusEl.innerHTML = `❌ ${data.message}`;
-        statusEl.className = "status fail";
-      } 
-      else {
-        statusEl.innerHTML = "⚠️ Something went wrong";
-        statusEl.className = "status fail";
+      // 🔥 try parse JSON safely
+      try {
+        return JSON.parse(text);
+      } catch {
+        throw new Error("Invalid JSON: " + text);
       }
     })
-    .catch(() => {
-      document.querySelector(".loader").style.display = "none";
-      statusEl.innerHTML = "❌ Server Error";
+    .then(data => {
+
+      loader.style.display = "none";
+
+      console.log("API Response:", data); // 👈 debug console
+
+      if (data.status === "verified" || data.status === "success") {
+        statusEl.innerHTML = `✅ ${data.message}<br><br><small>${data.deviceId}</small>`;
+        statusEl.className = "status success";
+      }
+
+      else if (data.status === "fail") {
+        statusEl.innerHTML = `❌ ${data.message || data.reason}`;
+        statusEl.className = "status fail";
+      }
+
+      else if (data.status === "not_verified" || data.status === "pending") {
+        statusEl.innerHTML = `⏳ ${data.message}`;
+        statusEl.className = "status loading";
+      }
+
+      else {
+        statusEl.innerHTML = `⚠️ Unknown response<br><small>${JSON.stringify(data)}</small>`;
+        statusEl.className = "status fail";
+      }
+
+    })
+    .catch(err => {
+      loader.style.display = "none";
+
+      statusEl.innerHTML = `❌ Error: ${err.message}`;
       statusEl.className = "status fail";
+
+      console.error("Fetch Error:", err);
     });
 }
 </script>
