@@ -1,24 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hardware Verification</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono&display=swap" rel="stylesheet"/>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verifying...</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
   <style>
-    /* CSS Same as your premium design */
-    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}:root{--blue:#2563eb;--blue-light:#eff6ff;--blue-mid:#bfdbfe;--white:#fff;--gray:#6b7280;--text:#111827}body{min-height:100vh;background:var(--white);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'DM Sans',sans-serif;color:var(--text);overflow:hidden}body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,#dbeafe 0%,transparent 70%)} .wrap{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:40px;padding:32px;text-align:center}.ring-wrap{position:relative;width:110px;height:110px;display:flex;align-items:center;justify-content:center}.ring{position:absolute;inset:0;border-radius:50%;border:3px solid transparent}.ring-outer{border-top-color:var(--blue);border-right-color:var(--blue-mid);animation:spin 1.1s linear infinite}.ring-inner{inset:14px;border-top-color:transparent;border-bottom-color:var(--blue);border-left-color:var(--blue-mid);animation:spin .75s linear infinite reverse}@keyframes spin{to{transform:rotate(360deg)}}.result-icon{display:none;width:110px;height:110px;border-radius:50%;align-items:center;justify-content:center;font-size:44px;animation:popIn .4s cubic-bezier(.34,1.56,.64,1) both}@keyframes popIn{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}.result-icon.success{background:#eff6ff;color:#2563eb}.result-icon.fail{background:#fef2f2;color:#dc2626}.status-msg{font-size:15px;color:var(--gray);min-height:22px}.status-msg.success{color:#1d4ed8;font-weight:500}.status-msg.fail{color:#dc2626;font-weight:500}.progress-bar{width:200px;height:2px;background:var(--blue-mid);border-radius:99px;overflow:hidden}.progress-fill{height:100%;width:0%;background:var(--blue);transition:width .3s ease}.footer{position:fixed;bottom:28px;font-size:12px;color:var(--gray)}.footer-logo{font-weight:500;color:var(--blue)}
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+    :root{--blue:#2563eb;--blue-light:#eff6ff;--blue-mid:#bfdbfe;--white:#fff;--gray:#6b7280;--text:#111827}
+    body{min-height:100vh;background:var(--white);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'DM Sans',sans-serif;color:var(--text);overflow:hidden}
+    body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,#dbeafe 0%,transparent 70%);pointer-events:none}
+    .wrap{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:40px;padding:32px;text-align:center}
+    .ring-wrap{position:relative;width:110px;height:110px;display:flex;align-items:center;justify-content:center}
+    .ring{position:absolute;inset:0;border-radius:50%;border:3px solid transparent}
+    .ring-outer{border-top-color:var(--blue);border-right-color:var(--blue-mid);animation:spin 1.1s linear infinite}
+    .ring-inner{inset:14px;border-top-color:transparent;border-bottom-color:var(--blue);border-left-color:var(--blue-mid);animation:spin .75s linear infinite reverse}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .result-icon{display:none;width:110px;height:110px;border-radius:50%;align-items:center;justify-content:center;font-size:44px;animation:popIn .4s cubic-bezier(.34,1.56,.64,1) both}
+    @keyframes popIn{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
+    .result-icon.success{background:#eff6ff;color:#2563eb}
+    .result-icon.fail{background:#fef2f2;color:#dc2626}
+    .status-msg{font-size:15px;color:var(--gray);min-height:22px}
+    .status-msg.success{color:#1d4ed8;font-weight:500}
+    .status-msg.fail{color:#dc2626;font-weight:500}
+    .progress-bar{width:200px;height:2px;background:var(--blue-mid);border-radius:99px;overflow:hidden}
+    .progress-fill{height:100%;width:0%;background:var(--blue);transition:width 0.3s ease}
+    .footer{position:fixed;bottom:28px;font-size:12px;color:var(--gray)}.footer-logo{font-weight:500;color:var(--blue)}
   </style>
 </head>
 <body>
-
 <div class="wrap">
-  <div id="ringWrap" class="ring-wrap">
-    <div class="ring ring-outer"></div><div class="ring ring-inner"></div>
-    <div class="ring-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-  </div>
+  <div id="ringWrap" class="ring-wrap"><div class="ring ring-outer"></div><div class="ring ring-inner"></div></div>
   <div id="resultIcon" class="result-icon"></div>
-  <div class="status-msg" id="statusMsg">Analyzing hardware...</div>
+  <div class="status-msg" id="statusMsg">Securing device link...</div>
   <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
 </div>
 <div class="footer">Powered by <span class="footer-logo">Unio Wallet</span> ✅</div>
@@ -29,16 +42,8 @@
     const gl = canvas.getContext('webgl');
     const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
     const renderer = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : "unknown";
-    
-    // Hardware traits that don't change with browser easily
-    const data = [
-      renderer, 
-      screen.width + "x" + screen.height,
-      navigator.hardwareConcurrency,
-      navigator.deviceMemory || "N/A"
-    ].join('|');
-
-    const encode = new TextEncoder().encode(data);
+    const traits = [renderer, screen.width + "x" + screen.height, navigator.hardwareConcurrency, "V1_SALT"].join('|');
+    const encode = new TextEncoder().encode(traits);
     const hash = await crypto.subtle.digest('SHA-256', encode);
     return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
   }
@@ -46,44 +51,36 @@
   async function start() {
     const params = new URLSearchParams(window.location.search);
     const botid = params.get('botid'), tgid = params.get('tgid');
-    const progFill = document.getElementById('progressFill');
+    const prog = document.getElementById('progressFill');
 
     if(!botid || !tgid) {
-        updateUI('fail', 'Invalid Access Link');
+        updateUI('fail', 'Access Denied: Missing ID');
         return;
     }
 
     const deviceid = await getHardwareID();
-    progFill.style.width = "60%";
+    prog.style.width = "70%";
 
     try {
       const res = await fetch(`/api/check?botid=${botid}&tgid=${tgid}&deviceid=${deviceid}`);
       const data = await res.json();
-      
-      if(data.status === "success") {
-        updateUI('success', 'Hardware Verified');
-      } else {
-        updateUI('fail', data.message);
-      }
+      updateUI(data.status, data.message);
     } catch (e) {
-      updateUI('fail', 'Server Error');
+      updateUI('fail', 'Connection Error');
     }
   }
 
   function updateUI(type, msg) {
     document.getElementById('ringWrap').style.display = 'none';
-    const resIcon = document.getElementById('resultIcon');
-    resIcon.style.display = 'flex';
-    resIcon.className = 'result-icon ' + type;
-    resIcon.textContent = type === 'success' ? '✓' : '✕';
-    const sMsg = document.getElementById('statusMsg');
-    sMsg.textContent = msg;
-    sMsg.className = 'status-msg ' + type;
+    const icon = document.getElementById('resultIcon');
+    icon.style.display = 'flex';
+    icon.className = 'result-icon ' + (type === 'success' ? 'success' : 'fail');
+    icon.textContent = type === 'success' ? '✓' : '✕';
+    document.getElementById('statusMsg').textContent = msg;
+    document.getElementById('statusMsg').className = 'status-msg ' + (type === 'success' ? 'success' : 'fail');
     document.getElementById('progressFill').style.width = '100%';
   }
-
   setTimeout(start, 1000);
 </script>
 </body>
-  </html>
-  
+</html>
