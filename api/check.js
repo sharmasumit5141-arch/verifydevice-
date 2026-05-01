@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 
+// Schema for Successful Verifications
 const AuthSchema = new mongoose.Schema({
     tgid: String,
     botid: String,
@@ -7,7 +8,18 @@ const AuthSchema = new mongoose.Schema({
     verifiedAt: { type: Date, default: Date.now }
 });
 
+// Schema for Cheating Attempts (Fail Logs)
+const FailLogSchema = new mongoose.Schema({
+    attemptedTgid: String,
+    originalTgid: String,
+    botid: String,
+    deviceid: String,
+    timestamp: { type: Date, default: Date.now },
+    reason: String
+});
+
 const Auth = mongoose.models.Auth || mongoose.model('Auth', AuthSchema);
+const FailLog = mongoose.models.FailLog || mongoose.model('FailLog', FailLogSchema);
 
 const connectDB = async () => {
     if (mongoose.connection.readyState >= 1) return;
@@ -19,41 +31,50 @@ export default async function handler(req, res) {
     const { botid, tgid, deviceid } = req.query;
 
     if (!botid || !tgid) {
-        return res.status(400).json({ status: "fail", message: "Invalid Request" });
+        return res.status(400).json({ status: "fail", message: "Missing Parameters" });
     }
 
-    // Bot checking status (Link not opened yet or checking from Bot)
+    // Bot status check (When no deviceid is sent)
     if (!deviceid) {
         const record = await Auth.findOne({ botid, tgid });
-        return record 
-            ? res.json({ status: "success", message: "Verified" }) 
-            : res.json({ status: "pending", message: "Not Opened" });
+        if (record) return res.json({ status: "success", message: "Verified" });
+        return res.json({ status: "pending", message: "Not Opened" });
     }
 
     try {
-        // 1. Check if THIS device is already used by SOMEONE ELSE on this bot
-        const deviceUsedByOther = await Auth.findOne({ botid, deviceid, tgid: { $ne: tgid } });
-        
-        if (deviceUsedByOther) {
-            return res.json({ 
-                status: "fail", 
-                message: "Security Alert: Hardware already linked to another account." 
-            });
+        // 1. HARDWARE LOCK LOGIC (Fail Case)
+        const hardwareLocked = await Auth.findOne({ botid, deviceid });
+
+        if (hardwareLocked) {
+            if (hardwareLocked.tgid !== tgid) {
+                // SAVE THE FRAUD ATTEMPT
+                const logFail = new FailLog({
+                    attemptedTgid: tgid,
+                    originalTgid: hardwareLocked.tgid,
+                    botid: botid,
+                    deviceid: deviceid,
+                    reason: "Multi-account detected on same hardware"
+                });
+                await logFail.save();
+
+                return res.json({ 
+                    status: "fail", 
+                    message: "Security Alert: This device is already linked to another account." 
+                });
+            } else {
+                return res.json({ status: "success", message: "Device Verified" });
+            }
         }
 
-        // 2. Check if THIS user is already verified
-        const existingUser = await Auth.findOne({ botid, tgid });
-        if (existingUser) {
-            // Update device ID if it changed (optional, but keep it strict for now)
-            return res.json({ status: "success", message: "Device Verified" });
-        }
+        // 2. NEW REGISTRATION
+        const userExists = await Auth.findOne({ botid, tgid });
+        if (userExists) return res.json({ status: "success", message: "User already verified" });
 
-        // 3. New User + New Device -> Save
-        const newEntry = new Auth({ tgid, botid, deviceid });
-        await newEntry.save();
+        const newAuth = new Auth({ tgid, botid, deviceid });
+        await newAuth.save();
         return res.json({ status: "success", message: "Verification Successful" });
 
     } catch (err) {
         return res.status(500).json({ status: "error", message: "Server Error" });
     }
-}
+    }
