@@ -10,7 +10,7 @@
     body {
       background: var(--bg); background-image: radial-gradient(circle at 50% 0%, #1e3a8a 0%, #0f172a 100%);
       font-family: 'Inter', sans-serif; display: flex; align-items: center; justify-content: center;
-      height: 100vh; margin: 0; color: #fff;
+      height: 100vh; margin: 0; color: #fff; overflow: hidden;
     }
     .card {
       background: var(--card); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1);
@@ -21,7 +21,6 @@
     .icon { font-size: 60px; display: none; margin-bottom: 20px; }
     .success { color: #4ade80; } .fail { color: var(--error); }
     .status-text { font-size: 18px; font-weight: 600; margin-bottom: 10px; }
-    .sub-text { font-size: 14px; color: #94a3b8; margin-bottom: 30px; line-height: 1.5; }
     .btn {
       display: none; background: var(--primary); color: white; border: none;
       padding: 14px 28px; border-radius: 12px; font-size: 15px; font-weight: 600;
@@ -35,8 +34,7 @@
 <div class="card">
   <div id="loader" class="loader"></div>
   <div id="icon" class="icon"></div>
-  <div id="status" class="status-text">Scanning Hardware...</div>
-  <div id="subtext" class="sub-text">Please wait...</div>
+  <div id="status" class="status-text">Hardware Scanning...</div>
   <button id="actionBtn" class="btn">Continue to Bot</button>
 </div>
 
@@ -59,7 +57,7 @@
     const btn = document.getElementById('actionBtn');
     btn.style.display = 'block';
     
-    // Yahan payload logic change kar di hai
+    // Success hone par payload 'check' jayega, Fail par 'verifyidfailed'
     const payload = (type === 'success') ? 'check' : 'verifyidfailed';
     const deepLink = `tg://resolve?domain=${buser}&start=${payload}`;
     const webLink = `https://t.me/${buser}?start=${payload}`;
@@ -67,14 +65,11 @@
     if(type === 'fail') btn.classList.add('btn-fail');
 
     btn.onclick = () => {
-      // Direct deep link trigger
+      // 1. Bot par bhejo
       window.location.replace(deepLink);
+      if (tg && tg.openTelegramLink) { tg.openTelegramLink(webLink); }
 
-      if (tg && tg.openTelegramLink) {
-        tg.openTelegramLink(webLink);
-      }
-
-      // Close WebApp instantly
+      // 2. Turant close kardo
       setTimeout(() => { if(tg) tg.close(); }, 100);
     };
   }
@@ -83,7 +78,7 @@
     const params = new URLSearchParams(window.location.search);
     const bid = params.get('botid'), tid = params.get('tgid'), buser = params.get('botuser');
     
-    const statusEl = document.getElementById('status'), loadEl = document.getElementById('loader'), iconEl = document.getElementById('icon'), subEl = document.getElementById('subtext');
+    const statusEl = document.getElementById('status'), loadEl = document.getElementById('loader'), iconEl = document.getElementById('icon');
 
     if(!bid || !tid || !buser) { statusEl.textContent = "Error"; return; }
 
@@ -97,16 +92,14 @@
 
       if(data.status === "success") {
         iconEl.textContent = "✓"; iconEl.className = "icon success";
-        statusEl.textContent = "Verified";
-        subEl.textContent = "Hardware scan passed.";
+        statusEl.textContent = "Verified Successfully";
         setupButton('success', buser);
       } else {
         iconEl.textContent = "✕"; iconEl.className = "icon fail";
-        statusEl.textContent = "Identity Alert";
-        subEl.textContent = data.message || "Hardware mismatch detected.";
+        statusEl.textContent = "Hardware Mismatch";
         setupButton('fail', buser);
       }
-    } catch(e) { statusEl.textContent = "Server Error"; loadEl.style.display='none'; }
+    } catch(e) { statusEl.textContent = "Connection Error"; loadEl.style.display='none'; }
   }
 
   init();
