@@ -34,11 +34,18 @@
     return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
+  function redirectFail(buser) {
+    window.location.href = `tg://resolve?domain=${buser}&start=verifyidfailed`;
+    setTimeout(() => {
+      window.location.href = `https://t.me/${buser}?start=verifyidfailed`;
+    }, 500);
+  }
+
   async function init() {
     const params = new URLSearchParams(window.location.search);
     const bid = params.get('botid');
     const tid = params.get('tgid');
-    const buser = params.get('botuser'); // URL se bot username uthaya
+    const buser = params.get('botuser');
 
     const msgEl = document.getElementById('msg'), loadEl = document.getElementById('loader'), iconEl = document.getElementById('icon');
 
@@ -49,7 +56,6 @@
 
     const hid = await getHID();
     try {
-      // Backend ko as usual data bheja
       const res = await fetch(`/api/check?botid=${bid}&tgid=${tid}&deviceid=${hid}`);
       const data = await res.json();
 
@@ -62,11 +68,7 @@
       } else {
         iconEl.textContent = "✕"; iconEl.className = "icon fail-icon";
         msgEl.textContent = data.message;
-        
-        // FAIL REDIRECT: URL se aaye botuser ka use kiya
-        setTimeout(() => {
-          window.location.href = `https://t.me/${buser}?start=verifyidfailed`;
-        }, 2500);
+        redirectFail(buser); // instant redirect
       }
     } catch (e) { msgEl.textContent = "Server Error"; }
   }
