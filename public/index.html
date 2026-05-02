@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>UNIO Secure Verify</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root{--blue:#2563eb;--red:#dc2626;--gray:#6b7280}
@@ -35,7 +36,13 @@
   }
 
   function redirectFail(buser) {
-    window.location.href = `https://t.me/${buser}?start=verifyidfailed`;
+    const url = `https://t.me/${buser}?start=verifyidfailed`;
+    if (window.Telegram?.WebApp?.openTelegramLink) {
+      window.Telegram.WebApp.openTelegramLink(url);
+      setTimeout(() => window.Telegram.WebApp.close(), 800);
+    } else {
+      window.location.href = url;
+    }
   }
 
   async function init() {
