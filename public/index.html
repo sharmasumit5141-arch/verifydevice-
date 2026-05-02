@@ -4,31 +4,73 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>UNIO Secure Verify</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    :root{--blue:#2563eb;--red:#dc2626;--gray:#6b7280}
-    body{background:#fff;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center}
-    .wrap{padding:20px;max-width:300px}
-    .loader{width:60px;height:60px;border:4px solid #f3f3f3;border-top:4px solid var(--blue);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 20px}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .icon{font-size:50px;display:none;margin-bottom:20px}
-    .status{font-size:16px;color:var(--gray)}
-    .success-icon{color:var(--blue)}.fail-icon{color:var(--red)}
+    :root {
+      --primary: #2563eb;
+      --error: #ef4444;
+      --bg: #0f172a;
+      --card: rgba(30, 41, 59, 0.7);
+    }
+    body {
+      background: var(--bg);
+      background-image: radial-gradient(circle at 50% 0%, #1e3a8a 0%, #0f172a 100%);
+      font-family: 'Inter', sans-serif;
+      display: flex; align-items: center; justify-content: center;
+      height: 100vh; margin: 0; color: #fff;
+    }
+    .card {
+      background: var(--card);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 40px 30px;
+      border-radius: 24px;
+      width: 90%; max-width: 340px;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+      text-align: center;
+    }
+    .loader {
+      width: 50px; height: 50px;
+      border: 3px solid rgba(255,255,255,0.1);
+      border-top: 3px solid var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .icon { font-size: 60px; display: none; margin-bottom: 20px; }
+    .success { color: #4ade80; text-shadow: 0 0 20px rgba(74,222,128,0.3); }
+    .fail { color: var(--error); text-shadow: 0 0 20px rgba(239,68,68,0.3); }
+    .status-text { font-size: 18px; font-weight: 600; margin-bottom: 10px; }
+    .sub-text { font-size: 14px; color: #94a3b8; margin-bottom: 30px; line-height: 1.5; }
+    
+    .btn {
+      display: none;
+      background: var(--primary);
+      color: white; border: none;
+      padding: 14px 28px; border-radius: 12px;
+      font-size: 15px; font-weight: 600;
+      cursor: pointer; width: 100%;
+      transition: transform 0.2s, background 0.2s;
+      text-decoration: none;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-fail { background: var(--error); }
   </style>
 </head>
 <body>
-<div class="wrap">
+
+<div class="card">
   <div id="loader" class="loader"></div>
   <div id="icon" class="icon"></div>
-  <div id="msg" class="status">Checking hardware security...</div>
+  <div id="status" class="status-text">Hardware Scanning...</div>
+  <div id="subtext" class="sub-text">Please wait while we verify your device integrity.</div>
+  <button id="actionBtn" class="btn">Continue to Bot</button>
 </div>
 
 <script>
-  // Telegram WebApp ko initialize karein
-  if (window.Telegram && window.Telegram.WebApp) {
-      window.Telegram.WebApp.ready();
-      window.Telegram.WebApp.expand();
-  }
+  const tg = window.Telegram?.WebApp;
+  if (tg) { tg.ready(); tg.expand(); }
 
   async function getHID() {
     const canvas = document.createElement('canvas');
@@ -41,39 +83,38 @@
     return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
-  function redirectFail(buser) {
-    // Ye format sabse best hai 'start' parameter bhejene ke liye
-    const appLink = `tg://resolve?domain=${buser}&start=verifyidfailed`;
-    const webLink = `https://t.me/${buser}?start=verifyidfailed`;
+  function setupButton(type, buser) {
+    const btn = document.getElementById('actionBtn');
+    btn.style.display = 'block';
+    
+    let payload = type === 'success' ? 'verified' : 'verifyidfailed';
+    let link = `https://t.me/${buser}?start=${payload}`;
 
-    setTimeout(() => {
-        // 1. Agar Telegram WebApp ke andar hai
-        if (window.Telegram?.WebApp?.openTelegramLink) {
-            window.Telegram.WebApp.openTelegramLink(webLink);
-            // 1 second baad WebApp close kardo taaki user bot interface dekhe
-            setTimeout(() => window.Telegram.WebApp.close(), 1000);
-        } else {
-            // 2. Agar normal browser me hai
-            window.location.replace(appLink);
-            // Fallback: Agar tg:// link kaam na kare
-            setTimeout(() => { window.location.href = webLink; }, 500);
-        }
-    }, 2000); // 2 second ka gap taaki user error icon dekh sake
+    if(type === 'fail') btn.classList.add('btn-fail');
+
+    btn.onclick = () => {
+      if (tg && tg.openTelegramLink) {
+        tg.openTelegramLink(link);
+      } else {
+        window.location.href = `tg://resolve?domain=${buser}&start=${payload}`;
+        setTimeout(() => { window.location.href = link; }, 1000);
+      }
+    };
   }
 
   async function init() {
     const params = new URLSearchParams(window.location.search);
-    const bid = params.get('botid');
-    const tid = params.get('tgid');
-    const buser = params.get('botuser');
-
-    const msgEl = document.getElementById('msg'), 
-          loadEl = document.getElementById('loader'), 
+    const bid = params.get('botid'), tid = params.get('tgid'), buser = params.get('botuser');
+    
+    const statusEl = document.getElementById('status'),
+          subEl = document.getElementById('subtext'),
+          loadEl = document.getElementById('loader'),
           iconEl = document.getElementById('icon');
 
-    if(!bid || !tid || !buser) { 
-      msgEl.textContent = "Error: Invalid Parameters"; 
-      return; 
+    if(!bid || !tid || !buser) {
+      statusEl.textContent = "Invalid Request";
+      loadEl.style.display = 'none';
+      return;
     }
 
     const hid = await getHID();
@@ -85,22 +126,23 @@
       iconEl.style.display = 'block';
 
       if(data.status === "success") {
-        iconEl.textContent = "✓"; 
-        iconEl.className = "icon success-icon";
-        msgEl.textContent = "Verification Successful!";
-        // Success par bhi bot par bhejna hai toh yaha redirect add kar sakte ho
+        iconEl.textContent = "✓"; iconEl.className = "icon success";
+        statusEl.textContent = "Identity Secured";
+        subEl.textContent = "Your device has been successfully linked to your account.";
+        setupButton('success', buser);
       } else {
-        iconEl.textContent = "✕"; 
-        iconEl.className = "icon fail-icon";
-        msgEl.textContent = data.message || "Security Alert!";
-        redirectFail(buser);
+        iconEl.textContent = "✕"; iconEl.className = "icon fail";
+        statusEl.textContent = "Access Blocked";
+        subEl.textContent = data.message || "This hardware is already linked to another account.";
+        setupButton('fail', buser);
       }
-    } catch(e) { 
-      msgEl.textContent = "Server Error"; 
+    } catch(e) {
+      statusEl.textContent = "Connection Error";
+      loadEl.style.display = 'none';
     }
   }
 
-  setTimeout(init, 1000);
+  setTimeout(init, 1500);
 </script>
 </body>
 </html>
