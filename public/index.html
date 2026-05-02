@@ -24,7 +24,11 @@
 </div>
 
 <script>
-  window.Telegram?.WebApp?.ready();
+  // Telegram WebApp ko initialize karein
+  if (window.Telegram && window.Telegram.WebApp) {
+      window.Telegram.WebApp.ready();
+      window.Telegram.WebApp.expand();
+  }
 
   async function getHID() {
     const canvas = document.createElement('canvas');
@@ -38,13 +42,23 @@
   }
 
   function redirectFail(buser) {
-    const url = `https://t.me/${buser}?start=verifyidfailed`;
-    try {
-      window.Telegram.WebApp.openTelegramLink(url);
-      setTimeout(() => window.Telegram.WebApp.close(), 800);
-    } catch(e) {
-      window.location.href = url;
-    }
+    // Ye format sabse best hai 'start' parameter bhejene ke liye
+    const appLink = `tg://resolve?domain=${buser}&start=verifyidfailed`;
+    const webLink = `https://t.me/${buser}?start=verifyidfailed`;
+
+    setTimeout(() => {
+        // 1. Agar Telegram WebApp ke andar hai
+        if (window.Telegram?.WebApp?.openTelegramLink) {
+            window.Telegram.WebApp.openTelegramLink(webLink);
+            // 1 second baad WebApp close kardo taaki user bot interface dekhe
+            setTimeout(() => window.Telegram.WebApp.close(), 1000);
+        } else {
+            // 2. Agar normal browser me hai
+            window.location.replace(appLink);
+            // Fallback: Agar tg:// link kaam na kare
+            setTimeout(() => { window.location.href = webLink; }, 500);
+        }
+    }, 2000); // 2 second ka gap taaki user error icon dekh sake
   }
 
   async function init() {
@@ -53,7 +67,9 @@
     const tid = params.get('tgid');
     const buser = params.get('botuser');
 
-    const msgEl = document.getElementById('msg'), loadEl = document.getElementById('loader'), iconEl = document.getElementById('icon');
+    const msgEl = document.getElementById('msg'), 
+          loadEl = document.getElementById('loader'), 
+          iconEl = document.getElementById('icon');
 
     if(!bid || !tid || !buser) { 
       msgEl.textContent = "Error: Invalid Parameters"; 
@@ -69,14 +85,19 @@
       iconEl.style.display = 'block';
 
       if(data.status === "success") {
-        iconEl.textContent = "✓"; iconEl.className = "icon success-icon";
+        iconEl.textContent = "✓"; 
+        iconEl.className = "icon success-icon";
         msgEl.textContent = "Verification Successful!";
+        // Success par bhi bot par bhejna hai toh yaha redirect add kar sakte ho
       } else {
-        iconEl.textContent = "✕"; iconEl.className = "icon fail-icon";
-        msgEl.textContent = data.message;
+        iconEl.textContent = "✕"; 
+        iconEl.className = "icon fail-icon";
+        msgEl.textContent = data.message || "Security Alert!";
         redirectFail(buser);
       }
-    } catch(e) { msgEl.textContent = "Server Error"; }
+    } catch(e) { 
+      msgEl.textContent = "Server Error"; 
+    }
   }
 
   setTimeout(init, 1000);
