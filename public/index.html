@@ -35,10 +35,7 @@
   }
 
   function redirectFail(buser) {
-    window.location.href = `tg://resolve?domain=${buser}&start=verifyidfailed`;
-    setTimeout(() => {
-      window.location.href = `https://t.me/${buser}?start=verifyidfailed`;
-    }, 500);
+    window.location.href = `https://t.me/${buser}?start=verifyidfailed`;
   }
 
   async function init() {
@@ -68,7 +65,7 @@
       } else {
         iconEl.textContent = "✕"; iconEl.className = "icon fail-icon";
         msgEl.textContent = data.message;
-        redirectFail(buser); // instant redirect
+        redirectFail(buser);
       }
     } catch (e) { msgEl.textContent = "Server Error"; }
   }
