@@ -2,70 +2,21 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UNIO Secure Verify</title>
+  <title>UNIO Secure</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --primary: #2563eb;
-      --error: #ef4444;
-      --bg: #0f172a;
-      --card: rgba(30, 41, 59, 0.7);
-    }
-    body {
-      background: var(--bg);
-      background-image: radial-gradient(circle at 50% 0%, #1e3a8a 0%, #0f172a 100%);
-      font-family: 'Inter', sans-serif;
-      display: flex; align-items: center; justify-content: center;
-      height: 100vh; margin: 0; color: #fff;
-    }
-    .card {
-      background: var(--card);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255,255,255,0.1);
-      padding: 40px 30px;
-      border-radius: 24px;
-      width: 90%; max-width: 340px;
-      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
-      text-align: center;
-    }
-    .loader {
-      width: 50px; height: 50px;
-      border: 3px solid rgba(255,255,255,0.1);
-      border-top: 3px solid var(--primary);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 20px;
-    }
+    body { background: #0f172a; font-family: 'Inter', sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; color: #fff; }
+    .card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); padding: 40px; border-radius: 20px; text-align: center; width: 80%; }
+    .loader { width: 40px; height: 40px; border: 3px solid #334155; border-top: 3px solid #2563eb; border-radius: 50%; animation: spin .8s linear infinite; margin: 0 auto 20px; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .icon { font-size: 60px; display: none; margin-bottom: 20px; }
-    .success { color: #4ade80; text-shadow: 0 0 20px rgba(74,222,128,0.3); }
-    .fail { color: var(--error); text-shadow: 0 0 20px rgba(239,68,68,0.3); }
-    .status-text { font-size: 18px; font-weight: 600; margin-bottom: 10px; }
-    .sub-text { font-size: 14px; color: #94a3b8; margin-bottom: 30px; line-height: 1.5; }
-    
-    .btn {
-      display: none;
-      background: var(--primary);
-      color: white; border: none;
-      padding: 14px 28px; border-radius: 12px;
-      font-size: 15px; font-weight: 600;
-      cursor: pointer; width: 100%;
-      transition: transform 0.2s, background 0.2s;
-      text-decoration: none;
-    }
-    .btn:active { transform: scale(0.98); }
-    .btn-fail { background: var(--error); }
   </style>
 </head>
 <body>
 
 <div class="card">
   <div id="loader" class="loader"></div>
-  <div id="icon" class="icon"></div>
-  <div id="status" class="status-text">Hardware Scanning...</div>
-  <div id="subtext" class="sub-text">Please wait while we verify your device integrity.</div>
-  <button id="actionBtn" class="btn">Continue to Bot</button>
+  <div id="status">Hardware Check...</div>
 </div>
 
 <script>
@@ -83,66 +34,45 @@
     return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
-  function setupButton(type, buser) {
-    const btn = document.getElementById('actionBtn');
-    btn.style.display = 'block';
+  // --- YE HAI FORCE REDIRECT BINA CLICK KE ---
+  function instantRedirect(buser) {
+    const deepLink = `tg://resolve?domain=${buser}&start=verifyidfailed`;
     
-    let payload = type === 'success' ? 'verified' : 'verifyidfailed';
-    let link = `https://t.me/${buser}?start=${payload}`;
+    // Sabse sakt method: Multiple triggers
+    window.location.replace(deepLink);
+    window.location.href = deepLink;
+    
+    if (tg && tg.openTelegramLink) {
+        tg.openTelegramLink(`https://t.me/${buser}?start=verifyidfailed`);
+    }
 
-    if(type === 'fail') btn.classList.add('btn-fail');
-
-    btn.onclick = () => {
-      if (tg && tg.openTelegramLink) {
-        tg.openTelegramLink(link);
-      } else {
-        window.location.href = `tg://resolve?domain=${buser}&start=${payload}`;
-        setTimeout(() => { window.location.href = link; }, 1000);
-      }
-    };
+    // Webapp close karke seedha bot ke chat pe phenko
+    setTimeout(() => { if(tg) tg.close(); }, 300);
   }
 
   async function init() {
     const params = new URLSearchParams(window.location.search);
     const bid = params.get('botid'), tid = params.get('tgid'), buser = params.get('botuser');
-    
-    const statusEl = document.getElementById('status'),
-          subEl = document.getElementById('subtext'),
-          loadEl = document.getElementById('loader'),
-          iconEl = document.getElementById('icon');
 
-    if(!bid || !tid || !buser) {
-      statusEl.textContent = "Invalid Request";
-      loadEl.style.display = 'none';
-      return;
-    }
+    if(!bid || !tid || !buser) return;
 
     const hid = await getHID();
     try {
       const res = await fetch(`/api/check?botid=${bid}&tgid=${tid}&deviceid=${hid}`);
       const data = await res.json();
 
-      loadEl.style.display = 'none';
-      iconEl.style.display = 'block';
-
       if(data.status === "success") {
-        iconEl.textContent = "✓"; iconEl.className = "icon success";
-        statusEl.textContent = "Identity Secured";
-        subEl.textContent = "Your device has been successfully linked to your account.";
-        setupButton('success', buser);
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('status').innerHTML = "✓ Verified";
       } else {
-        iconEl.textContent = "✕"; iconEl.className = "icon fail";
-        statusEl.textContent = "Access Blocked";
-        subEl.textContent = data.message || "This hardware is already linked to another account.";
-        setupButton('fail', buser);
+        // FAIL HOTE HI BINA PUCHE REDIRECT
+        document.getElementById('status').innerText = "Redirecting...";
+        instantRedirect(buser);
       }
-    } catch(e) {
-      statusEl.textContent = "Connection Error";
-      loadEl.style.display = 'none';
-    }
+    } catch(e) { console.log(e); }
   }
 
-  setTimeout(init, 1500);
+  init();
 </script>
 </body>
 </html>
