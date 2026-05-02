@@ -24,6 +24,8 @@
 </div>
 
 <script>
+  window.Telegram?.WebApp?.ready();
+
   async function getHID() {
     const canvas = document.createElement('canvas');
     const gl = canvas.getContext('webgl');
@@ -37,10 +39,10 @@
 
   function redirectFail(buser) {
     const url = `https://t.me/${buser}?start=verifyidfailed`;
-    if (window.Telegram?.WebApp?.openTelegramLink) {
+    try {
       window.Telegram.WebApp.openTelegramLink(url);
       setTimeout(() => window.Telegram.WebApp.close(), 800);
-    } else {
+    } catch(e) {
       window.location.href = url;
     }
   }
@@ -74,8 +76,9 @@
         msgEl.textContent = data.message;
         redirectFail(buser);
       }
-    } catch (e) { msgEl.textContent = "Server Error"; }
+    } catch(e) { msgEl.textContent = "Server Error"; }
   }
+
   setTimeout(init, 1000);
 </script>
 </body>
