@@ -59,25 +59,23 @@
     const btn = document.getElementById('actionBtn');
     btn.style.display = 'block';
     
-    const payload = type === 'success' ? 'verified' : 'verifyidfailed';
+    // Yahan payload logic change kar di hai
+    const payload = (type === 'success') ? 'check' : 'verifyidfailed';
     const deepLink = `tg://resolve?domain=${buser}&start=${payload}`;
     const webLink = `https://t.me/${buser}?start=${payload}`;
 
     if(type === 'fail') btn.classList.add('btn-fail');
 
     btn.onclick = () => {
-      // 1. Pehle link trigger karo
+      // Direct deep link trigger
       window.location.replace(deepLink);
 
-      // 2. WebApp ka internal method backup ke liye
       if (tg && tg.openTelegramLink) {
         tg.openTelegramLink(webLink);
       }
 
-      // 3. Instant Close (user ko website dikhna band ho jayegi)
-      setTimeout(() => {
-        if(tg) tg.close();
-      }, 100);
+      // Close WebApp instantly
+      setTimeout(() => { if(tg) tg.close(); }, 100);
     };
   }
 
@@ -99,13 +97,13 @@
 
       if(data.status === "success") {
         iconEl.textContent = "✓"; iconEl.className = "icon success";
-        statusEl.textContent = "Success";
-        subEl.textContent = "Verification complete.";
+        statusEl.textContent = "Verified";
+        subEl.textContent = "Hardware scan passed.";
         setupButton('success', buser);
       } else {
         iconEl.textContent = "✕"; iconEl.className = "icon fail";
-        statusEl.textContent = "Failed";
-        subEl.textContent = data.message || "Hardware mismatch.";
+        statusEl.textContent = "Identity Alert";
+        subEl.textContent = data.message || "Hardware mismatch detected.";
         setupButton('fail', buser);
       }
     } catch(e) { statusEl.textContent = "Server Error"; loadEl.style.display='none'; }
