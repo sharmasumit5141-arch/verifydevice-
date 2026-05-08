@@ -28,7 +28,6 @@ export default async function handler(req, res) {
     const session = await db.collection("sessions").findOne({ botHash: bot_hash });
     if (!session) return res.json({ status: "invalid", message: "Session not found" });
 
-    // Bot name session se lo
     const bot_name = session.bot || "unknown";
 
     const ip =
@@ -39,12 +38,13 @@ export default async function handler(req, res) {
 
     let resultStatus = "success";
 
-    if (fingerprint && tg_user_id) {
+    // ← FIXED: sirf fingerprint check karo, tg_user_id optional
+    if (fingerprint) {
 
-      // Same device + Same TG + Same Bot = Already Verified
+      // Same fingerprint + Same TG + Same Bot = Already Verified
       const alreadyVerified = await db.collection("fingerprints").findOne({
         fingerprint,
-        tg_user_id,
+        tg_user_id: tg_user_id || "",
         bot_name
       });
 
@@ -52,7 +52,7 @@ export default async function handler(req, res) {
         resultStatus = "already_verified";
 
       } else {
-        // Same device + alag TG + Same Bot = same_device
+        // Same fingerprint + Alag TG + Same Bot = same_device
         const sameDevice = await db.collection("fingerprints").findOne({
           fingerprint,
           bot_name
@@ -61,10 +61,10 @@ export default async function handler(req, res) {
         if (sameDevice) {
           resultStatus = "same_device";
         } else {
-          // Bilkul naya = save karo (bot_name bhi save hoga)
+          // Bilkul naya = save karo
           await db.collection("fingerprints").insertOne({
             fingerprint,
-            tg_user_id,
+            tg_user_id: tg_user_id || "",
             bot_name,
             bot_hash,
             ip,
@@ -127,6 +127,7 @@ export default async function handler(req, res) {
     });
 
     return res.json({ status: "sent", result: payload.status });
+
   } catch (err) {
     return res.json({ status: "error", message: err.message });
   }
