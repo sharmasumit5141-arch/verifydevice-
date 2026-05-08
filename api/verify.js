@@ -35,36 +35,31 @@ export default async function handler(req, res) {
 
     let resultStatus = "success";
 
-    // Same bot_id + Same fingerprint + Same TG = Already Verified
-    const alreadyVerified = await db.collection("fingerprints").findOne({
+    // Pehle sirf fingerprint + bot_id se dhundho
+    const existing = await db.collection("fingerprints").findOne({
       bot_id,
-      fingerprint,
-      tg_user_id: tg_user_id || ""
+      fingerprint
     });
 
-    if (alreadyVerified) {
-      resultStatus = "already_verified";
-
-    } else {
-      // Same bot_id + Same fingerprint + Different TG = FAIL
-      const sameDevice = await db.collection("fingerprints").findOne({
-        bot_id,
-        fingerprint
-      });
-
-      if (sameDevice) {
-        resultStatus = "fail"; // ← Different TG = hard fail
+    if (existing) {
+      // Same fingerprint mila — ab TG ID compare karo
+      if (existing.tg_user_id === (tg_user_id || "")) {
+        // Same TG = Already Verified
+        resultStatus = "already_verified";
       } else {
-        // Bilkul naya = save karo
-        await db.collection("fingerprints").insertOne({
-          bot_id,
-          fingerprint,
-          tg_user_id: tg_user_id || "",
-          ip,
-          createdAt: new Date(),
-        });
-        resultStatus = "success";
+        // Different TG = FAIL
+        resultStatus = "fail";
       }
+    } else {
+      // Bilkul naya = save karo
+      await db.collection("fingerprints").insertOne({
+        bot_id,
+        fingerprint,
+        tg_user_id: tg_user_id || "",
+        ip,
+        createdAt: new Date(),
+      });
+      resultStatus = "success";
     }
 
     let payload;
@@ -75,7 +70,7 @@ export default async function handler(req, res) {
         reason: "vpn_detected",
         vpn: "yes",
         bot_id,
-        tg_user_id
+        tg_user_id: tg_user_id || ""
       };
     } else if (resultStatus === "already_verified") {
       payload = {
@@ -83,7 +78,7 @@ export default async function handler(req, res) {
         reason: "same_device_same_tg",
         vpn: "no",
         bot_id,
-        tg_user_id
+        tg_user_id: tg_user_id || ""
       };
     } else if (resultStatus === "fail") {
       payload = {
@@ -91,7 +86,7 @@ export default async function handler(req, res) {
         reason: "same_device_different_tg",
         vpn: "no",
         bot_id,
-        tg_user_id
+        tg_user_id: tg_user_id || ""
       };
     } else {
       payload = {
@@ -99,7 +94,7 @@ export default async function handler(req, res) {
         reason: "new_device",
         vpn: "no",
         bot_id,
-        tg_user_id
+        tg_user_id: tg_user_id || ""
       };
     }
 
