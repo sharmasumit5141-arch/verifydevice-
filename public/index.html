@@ -76,10 +76,12 @@
     .step.active { border-color: rgba(26,111,255,0.4); background: rgba(26,111,255,0.05); box-shadow: 0 0 0 3px rgba(26,111,255,0.07); }
     .step.done   { border-color: rgba(0,184,110,0.35); background: rgba(0,184,110,0.05); }
     .step.fail   { border-color: rgba(224,48,80,0.35); background: rgba(224,48,80,0.05); }
+    .step.warn   { border-color: rgba(245,158,11,0.35); background: rgba(245,158,11,0.05); }
     .step-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccd6f0; flex-shrink: 0; transition: all 0.35s; }
     .step.active .step-dot { background: var(--blue); box-shadow: 0 0 0 3px rgba(26,111,255,0.2); animation: dotPulse 1s ease infinite; }
     .step.done .step-dot   { background: var(--success); animation: none; box-shadow: none; }
     .step.fail .step-dot   { background: var(--danger); animation: none; box-shadow: none; }
+    .step.warn .step-dot   { background: var(--warn); animation: none; box-shadow: none; }
     @keyframes dotPulse { 0%,100% { box-shadow: 0 0 0 3px rgba(26,111,255,0.22); } 50% { box-shadow: 0 0 0 6px rgba(26,111,255,0.08); } }
     .step-info { flex: 1; }
     .step-title { font-size: 13px; font-weight: 700; color: var(--text); }
@@ -89,6 +91,7 @@
     .tag-running { background: rgba(26,111,255,0.1); color: var(--blue); }
     .tag-done    { background: rgba(0,184,110,0.1); color: var(--success); }
     .tag-fail    { background: rgba(224,48,80,0.1); color: var(--danger); }
+    .tag-warn    { background: rgba(245,158,11,0.1); color: var(--warn); }
     .spin { width: 11px; height: 11px; border: 2px solid rgba(26,111,255,0.2); border-top-color: var(--blue); border-radius: 50%; animation: spinning 0.55s linear infinite; display: inline-block; vertical-align: middle; }
     @keyframes spinning { to { transform: rotate(360deg); } }
     .result-field { display: none; border-radius: 14px; padding: 16px 14px 14px; border: 1.5px solid; margin-top: 12px; animation: popIn 0.45s cubic-bezier(0.34,1.56,0.64,1) both; }
@@ -149,10 +152,18 @@
     <div class="step" id="s3">
       <div class="step-dot"></div>
       <div class="step-info">
+        <div class="step-title">Telegram ID Check</div>
+        <div class="step-sub">tg user identity verify</div>
+      </div>
+      <span class="step-tag tag-wait" id="t3">WAIT</span>
+    </div>
+    <div class="step" id="s4">
+      <div class="step-dot"></div>
+      <div class="step-info">
         <div class="step-title">Submit to Server</div>
         <div class="step-sub">sending result to bot</div>
       </div>
-      <span class="step-tag tag-wait" id="t3">WAIT</span>
+      <span class="step-tag tag-wait" id="t4">WAIT</span>
     </div>
   </div>
   <div class="result-field" id="resultField">
@@ -190,6 +201,9 @@
     } else if (state === "fail") {
       t.textContent = "FAIL";
       t.className = "step-tag tag-fail";
+    } else if (state === "warn") {
+      t.textContent = "WARN";
+      t.className = "step-tag tag-warn";
     }
   }
 
@@ -211,12 +225,12 @@
   async function run() {
     await sleep(500);
 
-    // Step 1 — Network
+    // ── Step 1 — Network Check ──
     setStep(1, "active");
     await sleep(1000);
     setStep(1, "done");
 
-    // Step 2 — Fingerprint
+    // ── Step 2 — Fingerprint ──
     setStep(2, "active");
     scanline.classList.add("fast");
     await sleep(200);
@@ -233,75 +247,97 @@
     setStep(2, "done");
     await sleep(350);
 
-    // Step 3 — Submit
+    // ── Step 3 — Telegram ID ──
     setStep(3, "active");
+    await sleep(500);
+
+    const tgUser   = window.Telegram && window.Telegram.WebApp
+                     && window.Telegram.WebApp.initDataUnsafe
+                     && window.Telegram.WebApp.initDataUnsafe.user;
+    const tgUserId = tgUser && tgUser.id ? String(tgUser.id) : "";
+
+    setStep(3, "done");
     await sleep(300);
 
-    // Telegram user ID
-    const tgUser   = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user;
-    const tgUserId = tgUser && tgUser.id ? String(tgUser.id) : "";
+    // ── Step 4 — Submit ──
+    setStep(4, "active");
+    await sleep(300);
 
     try {
       const resp = await fetch(SERVER + "/api/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          bot_hash:   BOT_HASH,
+          bot_hash:    BOT_HASH,
           fingerprint: fingerprint,
-          tg_user_id: tgUserId,
-          user_hash:  BOT_HASH
+          tg_user_id:  tgUserId,
+          user_hash:   BOT_HASH
         })
       });
 
       const data   = await resp.json();
       const result = data.result || "success";
 
-      setStep(3, result === "vpn" || result === "fail" ? "fail" : "done");
-      await sleep(300);
+      // ── Result Logic ──
 
-      if (result === "success") {
-        scanline.className = "scanline done-success";
-        showResult("success", "✅", "Verified Successfully!",
-          "Identity confirmed. Return to the bot.",
-          row("STATUS", "VERIFIED",  "v-green") +
-          row("VPN",    "NOT FOUND", "v-green") +
-          row("DEVICE", "NEW",       "v-blue")
-        );
-
-      } else if (result === "already_verified") {
+      // CASE 1: Same BotID + Same BrowserID + Same TG ID = Already Verified
+      if (result === "already_verified") {
+        setStep(4, "warn");
         scanline.className = "scanline done-warn";
         showResult("warn", "🙄", "Already Verified!",
-          "You are already verified. Return to bot.",
-          row("STATUS", "ALREADY VERIFIED", "v-yellow") +
-          row("DEVICE", "SAME",             "v-yellow") +
-          row("TG ID",  "MATCHED",          "v-yellow")
+          "You verified before. Return to bot.",
+          row("BOT ID",     "MATCHED",          "v-yellow") +
+          row("BROWSER ID", "SAME",             "v-yellow") +
+          row("TELEGRAM ID","SAME",             "v-yellow") +
+          row("STATUS",     "ALREADY VERIFIED", "v-yellow")
         );
 
+      // CASE 2: Same BotID + Same BrowserID + Different TG ID = FAIL
       } else if (result === "same_device") {
-        scanline.className = "scanline done-warn";
-        showResult("warn", "⚠️", "Same Device Detected",
-          "Device already registered. Limited access.",
-          row("STATUS", "SAME DEVICE", "v-yellow") +
-          row("VPN",    "NOT FOUND",   "v-green") +
-          row("DEVICE", "DUPLICATE",   "v-yellow")
+        setStep(4, "fail");
+        scanline.className = "scanline done-fail";
+        showResult("fail", "🚫", "Device Already Used!",
+          "This device is linked to another account.",
+          row("BOT ID",     "MATCHED",    "v-yellow") +
+          row("BROWSER ID", "SAME",       "v-red") +
+          row("TELEGRAM ID","DIFFERENT",  "v-red") +
+          row("STATUS",     "BLOCKED",    "v-red")
         );
 
+      // CASE 3: VPN Detected = FAIL
       } else if (result === "vpn" || result === "fail") {
+        setStep(4, "fail");
         scanline.className = "scanline done-fail";
         showResult("fail", "🚨", "VPN Detected!",
           "Disable VPN or proxy and try again.",
-          row("STATUS", "BLOCKED",  "v-red") +
-          row("VPN",    "DETECTED", "v-red") +
-          row("DEVICE", "—",        "v-blue")
+          row("BOT ID",     "MATCHED",  "v-blue") +
+          row("BROWSER ID", "—",        "v-blue") +
+          row("VPN",        "DETECTED", "v-red") +
+          row("STATUS",     "BLOCKED",  "v-red")
         );
 
+      // CASE 4: All New = SUCCESS
+      } else if (result === "success") {
+        setStep(4, "done");
+        scanline.className = "scanline done-success";
+        showResult("success", "✅", "Verified Successfully!",
+          "Identity confirmed. Return to the bot.",
+          row("BOT ID",     "MATCHED", "v-green") +
+          row("BROWSER ID", "NEW",     "v-green") +
+          row("TELEGRAM ID","NEW",     "v-green") +
+          row("STATUS",     "VERIFIED","v-green")
+        );
+
+      // CASE 5: Any other
       } else {
+        setStep(4, "done");
         scanline.className = "scanline done-success";
         showResult("success", "✅", "Done!", "Verification complete.",
           row("STATUS", "OK", "v-green")
         );
       }
 
+      // Auto-close Telegram WebApp
       setTimeout(function() {
         if (window.Telegram && window.Telegram.WebApp) {
           window.Telegram.WebApp.close();
@@ -309,7 +345,7 @@
       }, 2800);
 
     } catch(e) {
-      setStep(3, "fail");
+      setStep(4, "fail");
       scanline.className = "scanline done-fail";
       showResult("fail", "❌", "Connection Error",
         "Could not reach server. Please try again.",
