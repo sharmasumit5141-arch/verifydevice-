@@ -1,6 +1,5 @@
 import { connectDB } from "./_db.js";
 
-// ── VPN/Proxy detection via ip-api.com (free tier) ──────────────────────────
 async function checkVPN(ip) {
   try {
     const r = await fetch(`http://ip-api.com/json/${ip}?fields=proxy,hosting,vpn`);
@@ -19,48 +18,68 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.json({ status: "error", message: "POST only" });
 
-  const { bot_hash, fingerprint, user_hash } = req.body;
+  const { bot_hash, fingerprint, tg_user_id, user_hash } = req.body;
 
   if (!bot_hash) return res.json({ status: "error", message: "Missing bot_hash" });
 
   try {
     const db = await connectDB();
 
-    // Get session
     const session = await db.collection("sessions").findOne({ botHash: bot_hash });
     if (!session) return res.json({ status: "invalid", message: "Session not found" });
 
-    // Get real IP
+    // Bot name session se lo
+    const bot_name = session.bot || "unknown";
+
     const ip =
       req.headers["x-forwarded-for"]?.split(",")[0].trim() ||
-      req.socket?.remoteAddress ||
-      "";
+      req.socket?.remoteAddress || "";
 
     const vpnStatus = await checkVPN(ip);
 
-    // Check same device fingerprint
-    let sameDevice = false;
-    if (fingerprint) {
-      const existing = await db.collection("fingerprints").findOne({ fingerprint });
-      if (existing) {
-        sameDevice = true;
+    let resultStatus = "success";
+
+    if (fingerprint && tg_user_id) {
+
+      // Same device + Same TG + Same Bot = Already Verified
+      const alreadyVerified = await db.collection("fingerprints").findOne({
+        fingerprint,
+        tg_user_id,
+        bot_name
+      });
+
+      if (alreadyVerified) {
+        resultStatus = "already_verified";
+
       } else {
-        await db.collection("fingerprints").insertOne({
+        // Same device + alag TG + Same Bot = same_device
+        const sameDevice = await db.collection("fingerprints").findOne({
           fingerprint,
-          bot_hash,
-          ip,
-          createdAt: new Date(),
+          bot_name
         });
+
+        if (sameDevice) {
+          resultStatus = "same_device";
+        } else {
+          // Bilkul naya = save karo (bot_name bhi save hoga)
+          await db.collection("fingerprints").insertOne({
+            fingerprint,
+            tg_user_id,
+            bot_name,
+            bot_hash,
+            ip,
+            createdAt: new Date(),
+          });
+          resultStatus = "success";
+        }
       }
     }
 
-    // Mark session verified
     await db.collection("sessions").updateOne(
       { botHash: bot_hash },
-      { $set: { status: "verified", verifiedAt: new Date(), ip, fingerprint } }
+      { $set: { status: "verified", verifiedAt: new Date(), ip, fingerprint, tg_user_id } }
     );
 
-    // Build payload for bot webhook
     let payload;
 
     if (vpnStatus === "yes") {
@@ -72,7 +91,16 @@ export default async function handler(req, res) {
         title: "VPN Detected",
         message: "VPN use is not allowed.",
       };
-    } else if (sameDevice) {
+    } else if (resultStatus === "already_verified") {
+      payload = {
+        status: "already_verified",
+        vpn: "no",
+        captcha: "ok",
+        user_hash: user_hash || bot_hash,
+        title: "Already Verified",
+        message: "You are already verified.",
+      };
+    } else if (resultStatus === "same_device") {
       payload = {
         status: "same_device",
         vpn: "no",
@@ -92,7 +120,6 @@ export default async function handler(req, res) {
       };
     }
 
-    // Call bot webhook
     await fetch(session.webhook_url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
