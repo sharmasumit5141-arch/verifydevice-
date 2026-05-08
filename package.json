@@ -1,8 +1,8 @@
 {
-  "name": "tg-captcha-server",
-  "version": "1.0.0",
-  "type": "module",
-  "dependencies": {
-    "mongodb": "^6.3.0"
-  }
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "https://king-wallet-pn77.vercel.app/$1"
+    }
+  ]
 }
