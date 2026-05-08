@@ -1,108 +1,581 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UNIO Secure Verify</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Verify</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
   <style>
-    :root { --primary: #2563eb; --error: #ef4444; --bg: #0f172a; --card: rgba(30, 41, 59, 0.7); }
-    body {
-      background: var(--bg); background-image: radial-gradient(circle at 50% 0%, #1e3a8a 0%, #0f172a 100%);
-      font-family: 'Inter', sans-serif; display: flex; align-items: center; justify-content: center;
-      height: 100vh; margin: 0; color: #fff; overflow: hidden;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f0f4ff;
+      --card: #ffffff;
+      --blue: #1a6fff;
+      --blue2: #0040cc;
+      --cyan: #00c8ff;
+      --success: #00b86e;
+      --danger: #e03050;
+      --warn: #f59e0b;
+      --text: #0d1a33;
+      --muted: #7a8fb0;
+      --border: #d0dcf5;
     }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      font-family: 'Rajdhani', sans-serif;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(26,111,255,0.12) 1px, transparent 1px);
+      background-size: 28px 28px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      top: -120px; left: 50%;
+      transform: translateX(-50%);
+      width: 500px; height: 300px;
+      background: radial-gradient(ellipse, rgba(26,111,255,0.16) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
     .card {
-      background: var(--card); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1);
-      padding: 40px 30px; border-radius: 24px; width: 90%; max-width: 340px; text-align: center;
+      position: relative;
+      z-index: 1;
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: 24px;
+      padding: 34px 30px 26px;
+      width: 92%;
+      max-width: 360px;
+      box-shadow:
+        0 4px 32px rgba(26,111,255,0.10),
+        0 1px 4px rgba(0,0,0,0.06),
+        inset 0 1px 0 rgba(255,255,255,0.95);
+      overflow: hidden;
     }
-    .loader { width: 50px; height: 50px; border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .icon { font-size: 60px; display: none; margin-bottom: 20px; }
-    .success { color: #4ade80; } .fail { color: var(--error); }
-    .status-text { font-size: 18px; font-weight: 600; margin-bottom: 10px; }
-    .btn {
-      display: none; background: var(--primary); color: white; border: none;
-      padding: 14px 28px; border-radius: 12px; font-size: 15px; font-weight: 600;
-      cursor: pointer; width: 100%; transition: 0.2s;
+
+    /* Top shimmer bar */
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--blue2), var(--cyan), var(--blue), var(--cyan), var(--blue2));
+      background-size: 300% 100%;
+      animation: shimmer 2.5s linear infinite;
     }
-    .btn-fail { background: var(--error); }
+
+    @keyframes shimmer {
+      0%   { background-position: 0% 0; }
+      100% { background-position: 300% 0; }
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      margin-bottom: 20px;
+    }
+
+    .shield {
+      width: 50px; height: 50px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #e4edff, #ccd9ff);
+      border: 1.5px solid #b8ccff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(26,111,255,0.15);
+    }
+
+    .header-text h1 {
+      font-size: 19px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.15;
+      letter-spacing: 0.3px;
+    }
+
+    .header-text p {
+      font-size: 11px;
+      color: var(--muted);
+      font-family: 'Share Tech Mono', monospace;
+      margin-top: 3px;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── SCAN LINE ── */
+    .scanline-wrap {
+      position: relative;
+      height: 4px;
+      background: #e8eeff;
+      border-radius: 99px;
+      margin-bottom: 20px;
+      overflow: hidden;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);
+    }
+
+    .scanline {
+      position: absolute;
+      top: 0;
+      left: -50%;
+      width: 50%;
+      height: 100%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, transparent 0%, var(--cyan) 40%, var(--blue) 60%, var(--cyan) 80%, transparent 100%);
+      box-shadow: 0 0 10px var(--cyan), 0 0 20px rgba(26,111,255,0.5);
+      animation: scanMove 1.8s cubic-bezier(0.4,0,0.2,1) infinite;
+    }
+
+    .scanline.fast {
+      animation-duration: 0.38s !important;
+    }
+
+    .scanline.done-success {
+      animation: none !important;
+      left: 0; width: 100%;
+      background: linear-gradient(90deg, var(--success), #00ffaa, var(--success));
+      box-shadow: 0 0 14px rgba(0,184,110,0.7);
+      transition: left 0.5s ease, width 0.5s ease, background 0.4s;
+    }
+
+    .scanline.done-fail {
+      animation: none !important;
+      left: 0; width: 100%;
+      background: var(--danger);
+      box-shadow: 0 0 14px rgba(224,48,80,0.7);
+      transition: left 0.5s ease, width 0.5s ease, background 0.4s;
+    }
+
+    .scanline.done-warn {
+      animation: none !important;
+      left: 0; width: 100%;
+      background: var(--warn);
+      box-shadow: 0 0 14px rgba(245,158,11,0.7);
+      transition: left 0.5s ease, width 0.5s ease, background 0.4s;
+    }
+
+    @keyframes scanMove {
+      0%   { left: -50%; }
+      100% { left: 150%; }
+    }
+
+    /* Steps */
+    .steps { display: flex; flex-direction: column; gap: 8px; }
+
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 11px 13px;
+      border-radius: 12px;
+      border: 1.5px solid var(--border);
+      background: #f8faff;
+      transition: all 0.35s ease;
+    }
+
+    .step.active {
+      border-color: rgba(26,111,255,0.4);
+      background: rgba(26,111,255,0.05);
+      box-shadow: 0 0 0 3px rgba(26,111,255,0.07);
+    }
+
+    .step.done {
+      border-color: rgba(0,184,110,0.35);
+      background: rgba(0,184,110,0.05);
+    }
+
+    .step.fail {
+      border-color: rgba(224,48,80,0.35);
+      background: rgba(224,48,80,0.05);
+    }
+
+    .step-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #ccd6f0;
+      flex-shrink: 0;
+      transition: all 0.35s;
+    }
+
+    .step.active .step-dot {
+      background: var(--blue);
+      box-shadow: 0 0 0 3px rgba(26,111,255,0.2);
+      animation: dotPulse 1s ease infinite;
+    }
+
+    .step.done .step-dot { background: var(--success); animation: none; box-shadow: none; }
+    .step.fail .step-dot { background: var(--danger);  animation: none; box-shadow: none; }
+
+    @keyframes dotPulse {
+      0%, 100% { box-shadow: 0 0 0 3px rgba(26,111,255,0.22); }
+      50%       { box-shadow: 0 0 0 6px rgba(26,111,255,0.08); }
+    }
+
+    .step-info { flex: 1; }
+
+    .step-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: 0.2px;
+    }
+
+    .step-sub {
+      font-size: 10px;
+      color: var(--muted);
+      font-family: 'Share Tech Mono', monospace;
+      margin-top: 1px;
+    }
+
+    .step-tag {
+      font-size: 10px;
+      font-family: 'Share Tech Mono', monospace;
+      padding: 3px 9px;
+      border-radius: 99px;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .tag-wait    { background: #eef1f8; color: var(--muted); }
+    .tag-running { background: rgba(26,111,255,0.1); color: var(--blue); }
+    .tag-done    { background: rgba(0,184,110,0.1);  color: var(--success); }
+    .tag-fail    { background: rgba(224,48,80,0.1);  color: var(--danger); }
+
+    .spin {
+      width: 11px; height: 11px;
+      border: 2px solid rgba(26,111,255,0.2);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spinning 0.55s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    @keyframes spinning { to { transform: rotate(360deg); } }
+
+    /* ── RESULT FIELD ── */
+    .result-field {
+      display: none;
+      border-radius: 14px;
+      padding: 16px 14px 14px;
+      border: 1.5px solid;
+      margin-top: 12px;
+      animation: popIn 0.45s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.9) translateY(10px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .result-field.success {
+      border-color: rgba(0,184,110,0.3);
+      background: linear-gradient(135deg, rgba(0,184,110,0.06), rgba(0,255,150,0.03));
+    }
+
+    .result-field.fail {
+      border-color: rgba(224,48,80,0.3);
+      background: linear-gradient(135deg, rgba(224,48,80,0.06), rgba(255,80,80,0.03));
+    }
+
+    .result-field.warn {
+      border-color: rgba(245,158,11,0.3);
+      background: linear-gradient(135deg, rgba(245,158,11,0.06), rgba(255,200,0,0.03));
+    }
+
+    .result-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .result-icon {
+      width: 40px; height: 40px;
+      border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .success .result-icon { background: rgba(0,184,110,0.12); }
+    .fail    .result-icon { background: rgba(224,48,80,0.12); }
+    .warn    .result-icon { background: rgba(245,158,11,0.12); }
+
+    .result-head {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+
+    .success .result-head { color: var(--success); }
+    .fail    .result-head { color: var(--danger); }
+    .warn    .result-head { color: var(--warn); }
+
+    .result-desc {
+      font-size: 11px;
+      color: var(--muted);
+      font-family: 'Share Tech Mono', monospace;
+      margin-top: 1px;
+    }
+
+    .result-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(0,0,0,0.07);
+    }
+
+    .rrow {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    .rkey { color: var(--muted); }
+
+    .rval {
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 10px;
+      letter-spacing: 0.3px;
+    }
+
+    .v-green  { background: rgba(0,184,110,0.12);  color: var(--success); }
+    .v-red    { background: rgba(224,48,80,0.12);   color: var(--danger); }
+    .v-yellow { background: rgba(245,158,11,0.12);  color: var(--warn); }
+    .v-blue   { background: rgba(26,111,255,0.12);  color: var(--blue); }
+
+    .close-note {
+      text-align: center;
+      font-size: 11px;
+      color: var(--muted);
+      font-family: 'Share Tech Mono', monospace;
+      margin-top: 14px;
+      opacity: 0.6;
+      letter-spacing: 0.3px;
+    }
   </style>
 </head>
 <body>
 
 <div class="card">
-  <div id="loader" class="loader"></div>
-  <div id="icon" class="icon"></div>
-  <div id="status" class="status-text">Hardware Scanning...</div>
-  <button id="actionBtn" class="btn">Continue to Bot</button>
+
+  <div class="header">
+    <div class="shield">🔐</div>
+    <div class="header-text">
+      <h1>Human Verification</h1>
+      <p>AUTO-SCANNING DEVICE...</p>
+    </div>
+  </div>
+
+  <div class="scanline-wrap">
+    <div class="scanline" id="scanline"></div>
+  </div>
+
+  <div class="steps">
+
+    <div class="step" id="s1">
+      <div class="step-dot"></div>
+      <div class="step-info">
+        <div class="step-title">Network & IP Check</div>
+        <div class="step-sub">vpn / proxy detection</div>
+      </div>
+      <span class="step-tag tag-wait" id="t1">WAIT</span>
+    </div>
+
+    <div class="step" id="s2">
+      <div class="step-dot"></div>
+      <div class="step-info">
+        <div class="step-title">Device Fingerprint</div>
+        <div class="step-sub">unique device id scan</div>
+      </div>
+      <span class="step-tag tag-wait" id="t2">WAIT</span>
+    </div>
+
+    <div class="step" id="s3">
+      <div class="step-dot"></div>
+      <div class="step-info">
+        <div class="step-title">Submit to Server</div>
+        <div class="step-sub">sending result to bot</div>
+      </div>
+      <span class="step-tag tag-wait" id="t3">WAIT</span>
+    </div>
+
+  </div>
+
+  <!-- RESULT FIELD -->
+  <div class="result-field" id="resultField">
+    <div class="result-top">
+      <div class="result-icon" id="rIcon">✅</div>
+      <div>
+        <div class="result-head" id="rHead">Verified!</div>
+        <div class="result-desc" id="rDesc">Identity confirmed.</div>
+      </div>
+    </div>
+    <div class="result-rows" id="rRows"></div>
+  </div>
+
+  <p class="close-note" id="closeNote">Scanning... please wait</p>
+
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@4/dist/fp.min.js"></script>
 <script>
-  const tg = window.Telegram?.WebApp;
-  if (tg) { tg.ready(); tg.expand(); }
+  const params   = new URLSearchParams(window.location.search);
+  const BOT_HASH = params.get("bot_hash") || "";
+  const SERVER   = "https://YOUR-VERCEL-APP.vercel.app"; // ← apna URL daalo
 
-  async function getHID() {
-    const canvas = document.createElement('canvas');
-    const gl = canvas.getContext('webgl');
-    const debug = gl.getExtension('WEBGL_debug_renderer_info');
-    const renderer = debug ? gl.getParameter(debug.UNMASKED_RENDERER_WEBGL) : "unknown";
-    const traits = [renderer, screen.width+"x"+screen.height, navigator.hardwareConcurrency].join('|');
-    const encode = new TextEncoder().encode(traits);
-    const hash = await crypto.subtle.digest('SHA-256', encode);
-    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+  const scanline = document.getElementById("scanline");
+
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  function setStep(id, state) {
+    const s = document.getElementById("s" + id);
+    const t = document.getElementById("t" + id);
+    s.className = "step " + state;
+    if (state === "active") {
+      t.innerHTML = `<span class="spin"></span>`;
+      t.className = "step-tag tag-running";
+    } else if (state === "done") {
+      t.textContent = "DONE";
+      t.className = "step-tag tag-done";
+    } else if (state === "fail") {
+      t.textContent = "FAIL";
+      t.className = "step-tag tag-fail";
+    }
   }
 
-  function setupButton(type, buser) {
-    const btn = document.getElementById('actionBtn');
-    btn.style.display = 'block';
-    
-    // Success hone par payload 'check' jayega, Fail par 'verifyidfailed'
-    const payload = (type === 'success') ? 'check' : 'verifyidfailed';
-    const deepLink = `tg://resolve?domain=${buser}&start=${payload}`;
-    const webLink = `https://t.me/${buser}?start=${payload}`;
-
-    if(type === 'fail') btn.classList.add('btn-fail');
-
-    btn.onclick = () => {
-      // 1. Bot par bhejo
-      window.location.replace(deepLink);
-      if (tg && tg.openTelegramLink) { tg.openTelegramLink(webLink); }
-
-      // 2. Turant close kardo
-      setTimeout(() => { if(tg) tg.close(); }, 100);
-    };
+  function row(key, val, cls) {
+    return `<div class="rrow"><span class="rkey">${key}</span><span class="rval ${cls}">${val}</span></div>`;
   }
 
-  async function init() {
-    const params = new URLSearchParams(window.location.search);
-    const bid = params.get('botid'), tid = params.get('tgid'), buser = params.get('botuser');
-    
-    const statusEl = document.getElementById('status'), loadEl = document.getElementById('loader'), iconEl = document.getElementById('icon');
+  function showResult(type, emoji, head, desc, rows) {
+    const f = document.getElementById("resultField");
+    f.className = "result-field " + type;
+    f.style.display = "block";
+    document.getElementById("rIcon").textContent = emoji;
+    document.getElementById("rHead").textContent = head;
+    document.getElementById("rDesc").textContent = desc;
+    document.getElementById("rRows").innerHTML   = rows;
+    document.getElementById("closeNote").textContent = "You can close this window now.";
+  }
 
-    if(!bid || !tid || !buser) { statusEl.textContent = "Error"; return; }
+  async function run() {
+    await sleep(500);
 
-    const hid = await getHID();
+    // Step 1
+    setStep(1, "active");
+    await sleep(1000);
+    setStep(1, "done");
+
+    // Step 2 — fingerprint (speed up scan line)
+    setStep(2, "active");
+    scanline.classList.add("fast");
+    await sleep(200);
+
+    let fingerprint = "";
     try {
-      const res = await fetch(`/api/check?botid=${bid}&tgid=${tid}&deviceid=${hid}`);
-      const data = await res.json();
+      const fp  = await FingerprintJS.load();
+      const res = await fp.get();
+      fingerprint = res.visitorId;
+    } catch {
+      fingerprint = Math.random().toString(36).slice(2, 18);
+    }
 
-      loadEl.style.display = 'none';
-      iconEl.style.display = 'block';
+    setStep(2, "done");
+    await sleep(350);
 
-      if(data.status === "success") {
-        iconEl.textContent = "✓"; iconEl.className = "icon success";
-        statusEl.textContent = "Verified Successfully";
-        setupButton('success', buser);
+    // Step 3
+    setStep(3, "active");
+    await sleep(300);
+
+    try {
+      const resp = await fetch(SERVER + "/api/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bot_hash: BOT_HASH, fingerprint, user_hash: BOT_HASH }),
+      });
+
+      const data   = await resp.json();
+      const result = data.result || "success";
+
+      setStep(3, result === "vpn" ? "fail" : "done");
+      await sleep(300);
+
+      if (result === "success") {
+        scanline.className = "scanline done-success";
+        showResult("success", "✅", "Verified Successfully!",
+          "Identity confirmed. Return to the bot.",
+          row("STATUS", "VERIFIED",  "v-green") +
+          row("VPN",    "NOT FOUND", "v-green") +
+          row("DEVICE", "NEW",       "v-blue")
+        );
+
+      } else if (result === "same_device") {
+        scanline.className = "scanline done-warn";
+        showResult("warn", "⚠️", "Same Device Detected",
+          "Device already registered. Limited access.",
+          row("STATUS", "SAME DEVICE", "v-yellow") +
+          row("VPN",    "NOT FOUND",   "v-green") +
+          row("DEVICE", "DUPLICATE",   "v-yellow")
+        );
+
+      } else if (result === "vpn") {
+        scanline.className = "scanline done-fail";
+        showResult("fail", "🚨", "VPN Detected!",
+          "Disable VPN or proxy and try again.",
+          row("STATUS", "BLOCKED",  "v-red") +
+          row("VPN",    "DETECTED", "v-red") +
+          row("DEVICE", "—",        "v-blue")
+        );
+
       } else {
-        iconEl.textContent = "✕"; iconEl.className = "icon fail";
-        statusEl.textContent = "Hardware Mismatch";
-        setupButton('fail', buser);
+        scanline.className = "scanline done-success";
+        showResult("success", "✅", "Done!", "Verification complete.",
+          row("STATUS", "OK", "v-green")
+        );
       }
-    } catch(e) { statusEl.textContent = "Connection Error"; loadEl.style.display='none'; }
+
+      setTimeout(() => {
+        if (window.Telegram?.WebApp) window.Telegram.WebApp.close();
+      }, 2800);
+
+    } catch {
+      setStep(3, "fail");
+      scanline.className = "scanline done-fail";
+      showResult("fail", "❌", "Connection Error",
+        "Could not reach server. Please try again.",
+        row("ERROR", "TIMEOUT", "v-red")
+      );
+    }
   }
 
-  init();
+  run();
 </script>
 </body>
-</html>
+          </html>
+          
