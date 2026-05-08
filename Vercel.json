@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "https://king-wallet-pn77.vercel.app/$1"
+      "destination": "https://pazy-gateway.site/$1"
     }
   ]
 }
