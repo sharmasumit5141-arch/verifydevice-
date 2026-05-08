@@ -181,9 +181,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@4/dist/fp.min.js"></script>
 <script>
-  const params   = new URLSearchParams(window.location.search);
-  const BOT_HASH = params.get("bot_hash") || "";
-  const SERVER   = "https://verifydevice.vercel.app";
+  const params      = new URLSearchParams(window.location.search);
+  const BOT_ID      = params.get("bot_id") || "";
+  const CALLBACK_URL = params.get("callback_url") || "";
+  const SERVER      = "https://verifydevice.vercel.app";
 
   const scanline = document.getElementById("scanline");
   const sleep    = ms => new Promise(r => setTimeout(r, ms));
@@ -225,7 +226,7 @@
   async function run() {
     await sleep(500);
 
-    // ── Step 1 — Network Check ──
+    // ── Step 1 — Network ──
     setStep(1, "active");
     await sleep(1000);
     setStep(1, "done");
@@ -251,10 +252,10 @@
     setStep(3, "active");
     await sleep(500);
 
-    const tgUser   = window.Telegram && window.Telegram.WebApp
-                     && window.Telegram.WebApp.initDataUnsafe
-                     && window.Telegram.WebApp.initDataUnsafe.user;
-    const tgUserId = tgUser && tgUser.id ? String(tgUser.id) : "";
+    const tgUser    = window.Telegram && window.Telegram.WebApp
+                      && window.Telegram.WebApp.initDataUnsafe
+                      && window.Telegram.WebApp.initDataUnsafe.user;
+    const tgUserId  = tgUser && tgUser.id ? String(tgUser.id) : "";
 
     setStep(3, "done");
     await sleep(300);
@@ -268,19 +269,17 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          bot_hash:    BOT_HASH,
-          fingerprint: fingerprint,
-          tg_user_id:  tgUserId,
-          user_hash:   BOT_HASH
+          bot_id:       BOT_ID,
+          callback_url: CALLBACK_URL,
+          fingerprint:  fingerprint,
+          tg_user_id:   tgUserId,
         })
       });
 
       const data   = await resp.json();
       const result = data.result || "success";
 
-      // ── Result Logic ──
-
-      // CASE 1: Same BotID + Same BrowserID + Same TG ID = Already Verified
+      // ── Results ──
       if (result === "already_verified") {
         setStep(4, "warn");
         scanline.className = "scanline done-warn";
@@ -292,31 +291,17 @@
           row("STATUS",     "ALREADY VERIFIED", "v-yellow")
         );
 
-      // CASE 2: Same BotID + Same BrowserID + Different TG ID = FAIL
-      } else if (result === "same_device") {
+      } else if (result === "fail") {
         setStep(4, "fail");
         scanline.className = "scanline done-fail";
-        showResult("fail", "🚫", "Device Already Used!",
-          "This device is linked to another account.",
-          row("BOT ID",     "MATCHED",    "v-yellow") +
-          row("BROWSER ID", "SAME",       "v-red") +
-          row("TELEGRAM ID","DIFFERENT",  "v-red") +
-          row("STATUS",     "BLOCKED",    "v-red")
+        showResult("fail", "🚫", "Verification Failed!",
+          "Device or VPN issue detected.",
+          row("BOT ID",     "MATCHED",   "v-yellow") +
+          row("BROWSER ID", "SAME",      "v-red") +
+          row("TELEGRAM ID","DIFFERENT", "v-red") +
+          row("STATUS",     "BLOCKED",   "v-red")
         );
 
-      // CASE 3: VPN Detected = FAIL
-      } else if (result === "vpn" || result === "fail") {
-        setStep(4, "fail");
-        scanline.className = "scanline done-fail";
-        showResult("fail", "🚨", "VPN Detected!",
-          "Disable VPN or proxy and try again.",
-          row("BOT ID",     "MATCHED",  "v-blue") +
-          row("BROWSER ID", "—",        "v-blue") +
-          row("VPN",        "DETECTED", "v-red") +
-          row("STATUS",     "BLOCKED",  "v-red")
-        );
-
-      // CASE 4: All New = SUCCESS
       } else if (result === "success") {
         setStep(4, "done");
         scanline.className = "scanline done-success";
@@ -328,7 +313,6 @@
           row("STATUS",     "VERIFIED","v-green")
         );
 
-      // CASE 5: Any other
       } else {
         setStep(4, "done");
         scanline.className = "scanline done-success";
@@ -337,7 +321,6 @@
         );
       }
 
-      // Auto-close Telegram WebApp
       setTimeout(function() {
         if (window.Telegram && window.Telegram.WebApp) {
           window.Telegram.WebApp.close();
